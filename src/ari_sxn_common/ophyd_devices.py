@@ -1,4 +1,5 @@
-from ophyd import Component, Device, EpicsSignal, EpicsSignalRO
+from ophyd import Component, Device, EpicsMotor, EpicsSignalRO
+from ophyd.signal import InternalSignal
 from ophyd.status import wait
 
 
@@ -33,6 +34,29 @@ class DeviceWithLocations(Device):
             The keyword arguments passed to the parent 'Device' class
         """
 
+    class LocationSignal(InternalSignal):
+        """
+        An InternalSignal class to be used for updating the 'location' signal
+
+        This ophyd.signal.InternalSignal child class is used to provide a
+        read only signal that returns a list of locations a
+        DeviceWithLocations Device is currently in. It is an inner class
+        of DeviceWithLocations as it relies on the parent having attributes
+        defined by DeviceWithLocations. It updates the ```get``` method to
+        update its value before calling super().get(...).
+        """
+
+        def get(self, **kwargs):
+            # Determine the locations we are currently 'in'.
+            locations = []
+            for location, location_data in self.parent._locations_data.items():
+                if all([getattr(self.parent, motor).position in range(data[0] - data[1],
+                                                                      data[0] + data[1])
+                        for motor, data in location_data]):
+                    locations.append(location)
+            self.set(locations, internal=True)  # Set the value at read time.
+            super().get(**kwargs)  # run the parent get function.
+
     def __init__(self, *args, locations_data, **kwargs):
         """
         Initializes the DeviceWithLocations device class, passing *args
@@ -46,17 +70,6 @@ class DeviceWithLocations(Device):
     @property  # An attribute that returns what locations are available.
     def available_locations(self):
         return self._locations_data.keys()
-
-    @property  # An attribute that returns a list of current locations.
-    def current_locations(self):
-        locations = []
-        for location, location_data in self._locations_data.items():
-            if all([getattr(self, motor).position in range(data[0] - data[1],
-                                                           data[0] + data[1])
-                    for motor, data in location_data]):
-                locations.append(location)
-
-        return locations
 
     def set_location(self, location):
         """
@@ -77,11 +90,14 @@ class DeviceWithLocations(Device):
             status_list.append(getattr(self, motor).set(data[0]))
         wait(*status_list)
 
+    locations = Component(LocationSignal, value=[], name='locations',
+                          kind='config')
+
 
 # noinspection PyUnresolvedReferences
-class Diagnostic(Device):
+class Diagnostic(DeviceWithLocations):
     """
-    An DeviceWithLocations used for ARI & SXN 'Diagnostic' units.
+    A DeviceWithLocations ophyd Device used for ARI & SXN 'Diagnostic' units.
 
     The ARI & SXN diagnostic units consist of a movable blade that
     holds a number of diagnostic elements (e.g. a YaG screen, a photo-diode,
@@ -96,7 +112,23 @@ class Diagnostic(Device):
     ----------
     *args : arguments
         The arguments passed to the parent 'DeviceWithLocations' class
+    locations_data : {str: {str:(float, float), ...}, ...}
+        A dictionary mapping the names of 'locations' to a dictionary mapping
+        the 'motor name' to a (location position, location precision) tuple for
+        the corresponding location. These are used in the 'set_location'
+        method on the diagnostic device to quickly move between locations/
+        setups for the diagnostic. 'location position' is the value that the
+        corresponding 'motor name' axis should be set to when moving to
+        'location'. 'location precision' is used to determine if the device
+        is in 'location' by seeing if the 'motor name's 'current position'
+        is within +/- 'location precision' of 'location position'
     **kwargs : keyword arguments
-        The keyword arguments passed to the parent 'DeviceWithLocations' class
+        The keyword arguments passed to the parent 'Device' class
     """
-
+    blade = Component(EpicsMotor, ':multi_trans', name='blade',
+                      kind=config)
+    filter = Component(EpicsMotor, ':yag_trans', name='filter',
+                       kind='config')
+    photodiode = Component(EpicsSignalRO, ':photodiode',
+                           name='photodiode', kind='normal')
+    # camera = TO BE ADDED
