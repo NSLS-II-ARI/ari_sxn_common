@@ -52,7 +52,7 @@ class DeviceWithLocations(Device):
             for location, location_data in self.parent._locations_data.items():
                 if all([getattr(self.parent, motor).position in range(data[0] - data[1],
                                                                       data[0] + data[1])
-                        for motor, data in location_data]):
+                        for motor, data in location_data.items()]):
                     locations.append(location)
             self.set(locations, internal=True)  # Set the value at read time.
             super().get(**kwargs)  # run the parent get function.
@@ -126,7 +126,7 @@ class Diagnostic(DeviceWithLocations):
         The keyword arguments passed to the parent 'Device' class
     """
     blade = Component(EpicsMotor, ':multi_trans', name='blade',
-                      kind=config)
+                      kind='config')
     filter = Component(EpicsMotor, ':yag_trans', name='filter',
                        kind='config')
     photodiode = Component(EpicsSignalRO, ':photodiode',
