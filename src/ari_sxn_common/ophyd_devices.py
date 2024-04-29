@@ -9,12 +9,15 @@ class DeviceWithLocations(Device):
         A child of ophyd.Device that adds a 'location' functionality.
 
         The location functionality adds new properties (self._locations_data,
-        self.available_locations and self.current_locations) and methods (
-        self.set_location). These allow for a collection of 'locations' to
-        be defined which can be: set via ```self.set_location(location)```
-        and read via ```self.current_locations```. The list of available
-        locations to use in the ```self.set_location()``` method can be
-        found with the ```self.available_locations``` property.
+        self.available_locations), a new child signal (self.locations) and
+        a new method (self.set_location). These allow for a collection of
+        'locations' to be defined which can be:
+        set via
+        ```self.set_location(location)```
+        read via
+        ```self.locations.read()```
+        The list of available locations to use in the ```self.set_location()```
+        method can be found with the ```self.available_locations``` property.
 
         Parameters
         ----------
@@ -40,22 +43,25 @@ class DeviceWithLocations(Device):
 
         This ophyd.signal.InternalSignal child class is used to provide a
         read only signal that returns a list of locations a
-        DeviceWithLocations Device is currently in. It is an inner class
-        of DeviceWithLocations as it relies on the parent having attributes
-        defined by DeviceWithLocations. It updates the ```get``` method to
-        update its value before calling super().get(...).
+        DeviceWithLocations Device is currently in.
+
+        NOTE: It is an inner class of DeviceWithLocations as it relies on the
+        parent having attributes defined by DeviceWithLocations. It updates
+        the ```self.get(...)``` method to update its value before calling
+        ```super().get(...)```.
         """
 
         def get(self, **kwargs):
             # Determine the locations we are currently 'in'.
             locations = []
             for location, location_data in self.parent._locations_data.items():
-                if all([(getattr(self.parent, motor).position > data[0] - data[1] and
-                         getattr(self.parent, motor).position < data[0] + data[1])
+                if all([(data[0] - data[1] < getattr(self.parent, motor).position <
+                         data[0] + data[1])
                         for motor, data in location_data.items()]):
                     locations.append(location)
-            self.set(locations, internal=True).wait()  # Set the value at read time.
-            super().get(**kwargs)  # run the parent get function.
+            self.put(locations, internal=True)  # Set the value at read time.
+
+            return super().get(**kwargs)  # run the parent get function.
 
     def __init__(self, *args, locations_data, **kwargs):
         """
@@ -88,14 +94,15 @@ class DeviceWithLocations(Device):
         status_list = []
         for motor, data in location_data.items():
             status_list.append(getattr(self, motor).set(data[0]))
-        wait(*status_list)
+        for status in status_list:  # Wait for each move to finish
+            wait(status)
 
     locations = Component(LocationSignal, value=[], name='locations',
-                          kind='hinted')
+                          kind='normal')
 
 
 # noinspection PyUnresolvedReferences
-class Diagnostic(Device): # Change to DeviceWithLocation when that works
+class Diagnostic(DeviceWithLocations):
     """
     A DeviceWithLocations ophyd Device used for ARI & SXN 'Diagnostic' units.
 
