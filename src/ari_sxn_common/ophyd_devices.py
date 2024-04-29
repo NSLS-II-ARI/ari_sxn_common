@@ -50,11 +50,11 @@ class DeviceWithLocations(Device):
             # Determine the locations we are currently 'in'.
             locations = []
             for location, location_data in self.parent._locations_data.items():
-                if all([getattr(self.parent, motor).position in range(data[0] - data[1],
-                                                                      data[0] + data[1])
+                if all([(getattr(self.parent, motor).position > data[0] - data[1] and
+                         getattr(self.parent, motor).position < data[0] + data[1])
                         for motor, data in location_data.items()]):
                     locations.append(location)
-            self.set(locations, internal=True)  # Set the value at read time.
+            self.set(locations, internal=True).wait()  # Set the value at read time.
             super().get(**kwargs)  # run the parent get function.
 
     def __init__(self, *args, locations_data, **kwargs):
@@ -69,7 +69,7 @@ class DeviceWithLocations(Device):
 
     @property  # An attribute that returns what locations are available.
     def available_locations(self):
-        return self._locations_data.keys()
+        return list(self._locations_data.keys())
 
     def set_location(self, location):
         """
@@ -91,11 +91,11 @@ class DeviceWithLocations(Device):
         wait(*status_list)
 
     locations = Component(LocationSignal, value=[], name='locations',
-                          kind='config')
+                          kind='hinted')
 
 
 # noinspection PyUnresolvedReferences
-class Diagnostic(DeviceWithLocations):
+class Diagnostic(Device): # Change to DeviceWithLocation when that works
     """
     A DeviceWithLocations ophyd Device used for ARI & SXN 'Diagnostic' units.
 
@@ -126,9 +126,9 @@ class Diagnostic(DeviceWithLocations):
         The keyword arguments passed to the parent 'Device' class
     """
     blade = Component(EpicsMotor, ':multi_trans', name='blade',
-                      kind='config')
+                      kind='normal')
     filter = Component(EpicsMotor, ':yag_trans', name='filter',
-                       kind='config')
+                       kind='normal')
     photodiode = Component(EpicsSignalRO, ':photodiode',
                            name='photodiode', kind='normal')
     # camera = TO BE ADDED
