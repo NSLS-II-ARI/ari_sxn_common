@@ -1,6 +1,30 @@
-from ophyd import Component, Device, EpicsMotor, EpicsSignalRO
+import inspect
+from ophyd import (Component, Device, EpicsMotor, EpicsSignalRO,
+                   SignalRO)
+from ophyd.quadem import NSLS_EM, QuadEMPort
 from ophyd.signal import InternalSignal
 from ophyd.status import wait
+
+
+class ID29EM(NSLS_EM):
+    conf = Component(QuadEMPort, port_name='EM180', kind='hinted')
+    # em_range = Component(EpicsSignalWithRBV, 'Range', string=True,
+    #                     kind='hinted')
+
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.stage_sigs.update([(self.acquire_mode, 'Single')])
+        for attr, val in inspect.getmembers(self):  # step through all attrs
+            if attr in ['current1', 'current2', 'current3', 'current4']:
+                getattr(self, attr).kind = 'normal'
+                getattr(self, attr).nd_array_port.put('EM180')
+            elif attr in ['values_per_read', 'sample_time', 'num_average',
+                          'num_acquire', 'em_range']:
+                getattr(self, attr).kind = 'config'
+            elif hasattr(getattr(self, attr), 'kind'):
+                getattr(self, attr).kind = 'omitted'
+
 
 
 class DeviceWithLocations(Device):
