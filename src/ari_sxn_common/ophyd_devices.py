@@ -1,4 +1,3 @@
-import inspect
 from ophyd import (Component, Device, EpicsMotor, EpicsSignalRO)
 from ophyd.quadem import NSLS_EM, QuadEMPort
 from ophyd.signal import InternalSignal
@@ -11,15 +10,19 @@ class ID29EM(NSLS_EM):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.stage_sigs.update([(self.acquire_mode, 'Single')])
-        for attr, val in inspect.getmembers(self):  # step through all attrs
-            if attr in ['current1', 'current2', 'current3', 'current4']:
-                getattr(self, attr).kind = 'normal'
-                getattr(self, attr).nd_array_port.put('EM180')
-            elif attr in ['values_per_read', 'averaging_time', 'integration_time',
+        signals_list = [(signal.dotted_name, signal.item)
+                        for signal in self.walk_signals()
+                        if '.' not in signal.dotted_name]
+        devices_list = [(name, device) for (name, device) in self.walk_subdevices()]
+        for (name, device) in signals_list+devices_list:  # step through all attrs
+            if name in ['current1', 'current2', 'current3', 'current4']:
+                device.kind = 'normal'
+                device.nd_array_port.put('EM180')
+            elif name in ['values_per_read', 'averaging_time', 'integration_time',
                           'num_average', 'num_acquire', 'em_range']:
-                getattr(self, attr).kind = 'config'
-            elif hasattr(getattr(self, attr), 'kind'):
-                getattr(self, attr).kind = 'omitted'
+                device.kind = 'config'
+            elif hasattr(device, 'kind'):
+                device.kind = 'omitted'
 
 
 class DeviceWithLocations(Device):
