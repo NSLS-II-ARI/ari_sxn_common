@@ -24,6 +24,27 @@ class ID29EM(NSLS_EM):
             elif hasattr(device, 'kind'):
                 device.kind = 'omitted'
 
+    def trigger(self):
+        """
+        Trigger one acquisition. This is here to resolve an issue
+        whereby the built-in quadEM._status object defined by
+        quadEM.self._status_type(quadEM) never completes. will need
+        to circle back to why that doesn't work at a later date.
+        """
+        # This is to remove with trigger later when the issue is resolved
+        from ophyd.device import Staged
+        import time as ttime
+        if self._staged != Staged.yes:
+            raise RuntimeError(
+                "This detector is not ready to trigger."
+                "Call the stage() method before triggering."
+            )
+
+        # self._status = self._status_type(self)
+        self._status = self._acquisition_signal.set(1)
+        self.generate_datum(self._image_name, ttime.time(), {})
+        return self._status
+
 
 class DeviceWithLocations(Device):
     # noinspection GrazieInspection
