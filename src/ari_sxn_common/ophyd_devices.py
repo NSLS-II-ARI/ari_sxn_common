@@ -5,24 +5,39 @@ from ophyd.status import wait
 
 
 class ID29EM(NSLS_EM):
-    conf = Component(QuadEMPort, port_name='EM180', kind='hinted')
+    """
+    A 29-ID specific version of the NSLS_EM quadEM device.
+
+    The main difference between this and the ophyd standard is adjusting
+    the 'kind' of the signals to match what is required at 29-ID.
+
+    Parameters
+    ----------
+    *args : arguments
+        The arguments passed to the parent 'Device' class
+    **kwargs : keyword arguments
+            The keyword arguments passed to the parent 'Device' class
+    """
+    conf = Component(QuadEMPort, port_name='EM180', kind='config')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Set the correct value for acquire mode when staging.
         self.stage_sigs.update([(self.acquire_mode, 'Single')])
+        # Generate a list of signals and sub-devices for this qem
         signals_list = [(signal.dotted_name, signal.item)
                         for signal in self.walk_signals()
                         if '.' not in signal.dotted_name]
         devices_list = [(name, device) for (name, device) in self.walk_subdevices()]
-        for (name, device) in signals_list+devices_list:  # step through all attrs
+        for (name, device) in signals_list+devices_list:  # step through all attributes
             if name in ['current1', 'current2', 'current3', 'current4']:
-                device.kind = 'normal'
-                device.nd_array_port.put('EM180')
+                device.kind = 'hinted'  # Hint this signal for proper readback
+                device.nd_array_port.put('EM180')  # Set the correct port for this value.
             elif name in ['values_per_read', 'averaging_time', 'integration_time',
                           'num_average', 'num_acquire', 'em_range']:
-                device.kind = 'config'
+                device.kind = 'config'  # Set signal to 'config' for proper readback
             elif hasattr(device, 'kind'):
-                device.kind = 'omitted'
+                device.kind = 'omitted'  # set signal to 'omitted' for proper readback
 
     def trigger(self):
         """
@@ -61,12 +76,17 @@ class DeviceWithLocations(Device):
         ```self.locations.read()```
         The list of available locations to use in the ```self.set_location()```
         method can be found with the ```self.available_locations``` property.
+        As the 'locations' attribute is a read-only ophyd component that returns
+        a list of 'locations' that the device is currently 'in' this is by
+        default set to ```kind='config'``` by default so that it will be
+        read using ```read_configuration()``` and hence recorded in a plans
+        metadata.
 
         Parameters
         ----------
         *args : arguments
             The arguments passed to the parent 'Device' class
-        locations_data : {str: {str:(float, float), ...}, ...}
+        locations_data : {str: {str:(float, float), ...}, ...}, optional.
             A dictionary mapping the names of 'locations' to a dictionary mapping
             the 'motor name' to a (location position, location precision) tuple for
             the corresponding location. These are used in the 'set_location'
@@ -106,7 +126,7 @@ class DeviceWithLocations(Device):
 
             return super().get(**kwargs)  # run the parent get function.
 
-    def __init__(self, *args, locations_data, **kwargs):
+    def __init__(self, *args, locations_data=None, **kwargs):
         """
         Initializes the DeviceWithLocations device class, passing *args
         and **kwargs through to parent.__init__(...) and adding some child
@@ -114,6 +134,8 @@ class DeviceWithLocations(Device):
         descriptions.
         """
         super().__init__(*args, **kwargs)
+        if locations_data is None:
+            locations_data = {}
         self._locations_data = locations_data
 
     @property  # An attribute that returns what locations are available.
@@ -141,7 +163,7 @@ class DeviceWithLocations(Device):
             wait(status)
 
     locations = Component(LocationSignal, value=[], name='locations',
-                          kind='normal')
+                          kind='config')
 
 
 # noinspection PyUnresolvedReferences
@@ -156,13 +178,15 @@ class Diagnostic(DeviceWithLocations):
     also have a camera, for viewing the image on the filter or blade YaG
     screens, and an electrometer for measuring the current on the photo-diode.
     The diagnostic also has a 'set_location' method that allows the user to quickly
-    move to the locations defined by the 'locations' argument.
+    move to the locations defined by the 'locations' argument. The 'locations'
+    attribute is a read-only ophyd signal that returns a list of 'locations' that
+    the device is currently 'in'.
 
     Parameters
     ----------
     *args : arguments
         The arguments passed to the parent 'DeviceWithLocations' class
-    locations_data : {str: {str:(float, float), ...}, ...}
+    locations_data : {str: {str:(float, float), ...}, ...}, optional.
         A dictionary mapping the names of 'locations' to a dictionary mapping
         the 'motor name' to a (location position, location precision) tuple for
         the corresponding location. These are used in the 'set_location'
@@ -171,14 +195,72 @@ class Diagnostic(DeviceWithLocations):
         corresponding 'motor name' axis should be set to when moving to
         'location'. 'location precision' is used to determine if the device
         is in 'location' by seeing if the 'motor name's 'current position'
-        is within +/- 'location precision' of 'location position'
+        is within +/- 'location precision' of 'location position'.
     **kwargs : keyword arguments
         The keyword arguments passed to the parent 'Device' class
     """
     blade = Component(EpicsMotor, ':multi_trans', name='blade',
-                      kind='normal')
+                      kind='config')
     filter = Component(EpicsMotor, ':yag_trans', name='filter',
-                       kind='normal')
+                       kind='config')
     photodiode = Component(EpicsSignalRO, ':photodiode',
                            name='photodiode', kind='normal')
     # camera = TO BE ADDED
+
+
+class BaffleSlit(DeviceWithLocations):
+    """
+    A DeviceWithLocations ophyd Device used for ARI & SXN 'Baffle Slit' units.
+
+    The ARI & SXN baffle slit units consist of four movable blades that can be used
+    to 'trim' the beam. The current to ground can be read from each of these blades
+    as well which gives a way to determine the 'position' of the beam at the baffle
+    slit location in real time. The baffle slit units also have a 'set_location'
+    method that allows the user to quickly move to the locations defined by the
+    'locations' argument, this could be used to quickly move the blades to the
+    pre-determined 'operation' position. The 'location' attribute is a read-only
+    ophyd signal that returns a list of 'locations' that the device is currently
+    'in'.
+
+    Parameters
+    ----------
+    *args : arguments
+        The arguments passed to the grandparent 'Device' class
+    name : str
+        The 'name' argument passed through to the grandparent 'Device' class
+    locations_data : {str: {str:(float, float), ...}, ...}
+        A dictionary mapping the names of 'locations' to a dictionary mapping
+        the 'motor name' to a (location position, location precision) tuple for
+        the corresponding location. These are used in the 'set_location'
+        method on the diagnostic device to quickly move between locations/
+        setups for the baffle slit. 'location position' is the value that the
+        corresponding 'motor name' axis should be set to when moving to
+        'location'. 'location precision' is used to determine if the device
+        is in 'location' by seeing if the 'motor name's 'current position'
+        is within +/- 'location precision' of 'location position'. This is
+        passed through to the parent 'DeviceWithLocations' class.
+    **kwargs : keyword arguments
+        The keyword arguments passed to the grandparent 'Device' class
+    """
+
+    def __init__(self, *args, name, locations_data=None, **kwargs):
+        super().__init__(*args, name=name, locations_data=locations_data,
+                         **kwargs)
+        # names to give the ```currents.current*.mean_value``` in self.read*() dicts.
+        signal_names = [f'{name}_I_top', f'{name}_I_bottom',
+                        f'{name}_I_inboard', f'{name}_I_outboard']
+        # the list of ```currents.current*``` attributes
+        current_names = ['current1', 'current2', 'current3', 'current4']
+        currents = getattr(self, 'currents')  # ```self.currents``` attr.
+
+        # adjust the ```name``` attr as specified above.
+        for current, name in zip(current_names, signal_names):
+            getattr(currents, current).mean_value.name = name
+
+    # The 4 blade motor components
+    top = Component(EpicsMotor, ':top', name='top', kind='config')
+    bottom = Component(EpicsMotor, ':bottom', name='bottom', kind='config')
+    inboard = Component(EpicsMotor, ':inboard', name='inboard', kind='config')
+    outboard = Component(EpicsMotor, ':outboard', name='outboard', kind='config')
+    # The current read-back of the 4 blades.
+    currents = Component(ID29EM, ':currents', name='currents', kind='hinted',)
