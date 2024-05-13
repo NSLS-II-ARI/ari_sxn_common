@@ -247,15 +247,16 @@ class BaffleSlit(DeviceWithLocations):
         super().__init__(*args, name=name, locations_data=locations_data,
                          **kwargs)
         # names to give the ```currents.current*.mean_value``` in self.read*() dicts.
-        signal_names = [f'{name}_I_top', f'{name}_I_bottom',
-                        f'{name}_I_inboard', f'{name}_I_outboard']
+        signal_names = ['top', 'bottom', 'inboard', 'outboard']
         # the list of ```currents.current*``` attributes
         current_names = ['current1', 'current2', 'current3', 'current4']
         currents = getattr(self, 'currents')  # ```self.currents``` attr.
 
         # adjust the ```name``` attr as specified above.
-        for current, name in zip(current_names, signal_names):
-            getattr(currents, current).mean_value.name = name
+        for current_name, name in zip(current_names, signal_names):
+            current = getattr(currents, current_name)
+            current.mean_value.name = f'currents_{name}'
+            setattr(self.currents, 'name', current)
 
     # The 4 blade motor components
     top = Component(EpicsMotor, ':top', name='top', kind='config')
