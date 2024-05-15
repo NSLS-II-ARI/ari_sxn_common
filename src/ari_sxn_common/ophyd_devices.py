@@ -1,6 +1,49 @@
-from ophyd import Component, Device, EpicsMotor, EpicsSignalRO
+from ophyd import (Component, Device, EpicsMotor, EpicsSignalRO)
+from ophyd.quadem import NSLS_EM, QuadEMPort
 from ophyd.signal import InternalSignal
 from ophyd.status import wait
+
+
+class ID29EM(NSLS_EM):
+    conf = Component(QuadEMPort, port_name='EM180', kind='hinted')
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.stage_sigs.update([(self.acquire_mode, 'Single')])
+        signals_list = [(signal.dotted_name, signal.item)
+                        for signal in self.walk_signals()
+                        if '.' not in signal.dotted_name]
+        devices_list = [(name, device) for (name, device) in self.walk_subdevices()]
+        for (name, device) in signals_list+devices_list:  # step through all attrs
+            if name in ['current1', 'current2', 'current3', 'current4']:
+                device.kind = 'normal'
+                device.nd_array_port.put('EM180')
+            elif name in ['values_per_read', 'averaging_time', 'integration_time',
+                          'num_average', 'num_acquire', 'em_range']:
+                device.kind = 'config'
+            elif hasattr(device, 'kind'):
+                device.kind = 'omitted'
+
+    def trigger(self):
+        """
+        Trigger one acquisition. This is here to resolve an issue
+        whereby the built-in quadEM._status object defined by
+        quadEM.self._status_type(quadEM) never completes. will need
+        to circle back to why that doesn't work at a later date.
+        """
+        # This is to remove with trigger later when the issue is resolved
+        from ophyd.device import Staged
+        import time as ttime
+        if self._staged != Staged.yes:
+            raise RuntimeError(
+                "This detector is not ready to trigger."
+                "Call the stage() method before triggering."
+            )
+
+        # self._status = self._status_type(self)
+        self._status = self._acquisition_signal.set(1)
+        self.generate_datum(self._image_name, ttime.time(), {})
+        return self._status
 
 
 class DeviceWithLocations(Device):
