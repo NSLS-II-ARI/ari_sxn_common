@@ -201,6 +201,15 @@ class Diagnostic(DeviceWithLocations):
     **kwargs : keyword arguments
         The keyword arguments passed to the parent 'Device' class
     """
+    def __init__(self, *args, name, locations_data=None, photodiode_signal=None,
+                 **kwargs):
+        super().__init__(*args, name=name, locations_data=locations_data,
+                         **kwargs)
+
+        if photodiode_signal:
+            photodiode_signal.mean_value.name = f'{name}_photodiode'  # Adjust the name
+            setattr(self, 'photodiode', photodiode_signal)  # Create a sym-link
+
     blade = Component(EpicsMotor, ':multi_trans', name='blade',
                       kind='config')
     filter = Component(EpicsMotor, ':yag_trans', name='filter',
@@ -255,10 +264,10 @@ class BaffleSlit(DeviceWithLocations):
         currents = getattr(self, 'currents')  # ```self.currents``` attr.
 
         # for each of the current*.mean_value attrs (* = 1,2,3, or 4)
-        for current_name, name in zip(current_names, signal_names):
+        for current_name, signal_name in zip(current_names, signal_names):
             current = getattr(currents, current_name)
-            current.mean_value.name = f'currents_{name}'  # Adjust the name
-            setattr(self.currents, 'name', current)  # Create a sym-link
+            current.mean_value.name = f'currents_{signal_name}'  # Adjust the name
+            setattr(self.currents, signal_name, current)  # Create a sym-link
 
     # The 4 blade motor components
     top = Component(EpicsMotor, ':top', name='top', kind='config')
