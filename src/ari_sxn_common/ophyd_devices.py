@@ -41,12 +41,11 @@ class ID29EM(NSLS_EM):
 
     def trigger(self):
         """
-        Trigger one acquisition. This is here to resolve an issue
+        Trigger one acquisition. This function is here to resolve an issue
         whereby the built-in quadEM._status object defined by
-        quadEM.self._status_type(quadEM) never completes. will need
-        to circle back to why that doesn't work at a later date.
+        quadEM.self._status_type(quadEM) never completes. will need to circle
+        back to why that doesn't work at a later date.
         """
-        # This is to remove with trigger later when the issue is resolved
         from ophyd.device import Staged
         import time as ttime
         if self._staged != Staged.yes:
@@ -214,8 +213,7 @@ class Diagnostic(DeviceWithLocations):
                       kind='config')
     filter = Component(EpicsMotor, ':yag_trans', name='filter',
                        kind='config')
-    photodiode = Component(EpicsSignalRO, ':photodiode',
-                           name='photodiode', kind='normal')
+
     # camera = TO BE ADDED
 
 
