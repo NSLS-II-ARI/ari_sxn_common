@@ -117,6 +117,8 @@ class DeviceWithLocations(Device):
         def get(self, **kwargs):
             # Determine the locations we are currently 'in'.
             locations = []
+            # Note the next line gives an accessing a protected member '_locations_data'
+            # warning in my editor. I am accepting the risk !-).
             for location, location_data in self.parent._locations_data.items():
                 if all([(data[0] - data[1] < getattr(self.parent, motor).position <
                          data[0] + data[1])
