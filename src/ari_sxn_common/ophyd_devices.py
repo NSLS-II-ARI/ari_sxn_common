@@ -1,4 +1,4 @@
-from ophyd import (Component, Device, EpicsMotor, EpicsSignalRO)
+from ophyd import (Component, Device, EpicsMotor)
 from ophyd.quadem import NSLS_EM, QuadEMPort
 from ophyd.signal import InternalSignal
 from ophyd.status import wait
@@ -69,17 +69,15 @@ class DeviceWithLocations(Device):
         self.available_locations), a new child signal (self.locations) and
         a new method (self.set_location). These allow for a collection of
         'locations' to be defined which can be:
-        set via
-        ```self.set_location(location)```
-        read via
-        ```self.locations.read()```
+        * set via ```self.set_location(location)```
+        * read via ```self.locations.read()```
+
         The list of available locations to use in the ```self.set_location()```
         method can be found with the ```self.available_locations``` property.
         As the 'locations' attribute is a read-only ophyd component that returns
-        a list of 'locations' that the device is currently 'in' this is by
-        default set to ```kind='config'``` by default so that it will be
-        read using ```read_configuration()``` and hence recorded in a plans
-        metadata.
+        a list of 'locations' that the device is currently 'in' this is set to
+        ```kind='config'``` by default so that it will be read using
+        ```read_configuration()``` and hence recorded in a plans metadata.
 
         Parameters
         ----------
@@ -116,7 +114,7 @@ class DeviceWithLocations(Device):
         def get(self, **kwargs):
             # Determine the locations we are currently 'in'.
             locations = []
-            # Note the next line gives an accessing a protected member '_locations_data'
+            # Note the next line gives an 'accessing a protected member, _locations_data'
             # warning in my editor. I am accepting the risk !-).
             for location, location_data in self.parent._locations_data.items():
                 if all([(data[0] - data[1] < getattr(self.parent, motor).position <
