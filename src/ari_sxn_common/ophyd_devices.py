@@ -257,13 +257,13 @@ class BaffleSlit(DeviceWithLocations):
         signal_names = ['top', 'bottom', 'inboard', 'outboard']
         # the list of ```currents.current*``` attributes
         current_names = ['current1', 'current2', 'current3', 'current4']
-        #currents = getattr(self, 'currents')  # ```self.currents``` attr.
+        currents = getattr(self, 'currents')  # ```self.currents``` attr.
 
         # for each of the current*.mean_value attrs (* = 1,2,3, or 4)
-        #for current_name, signal_name in zip(current_names, signal_names):
-        #    current = getattr(currents, current_name)
-        #    current.mean_value.name = f'currents_{signal_name}'  # Adjust the name
-        #    setattr(self.currents, signal_name, current)  # Create a sym-link
+        for current_name, signal_name in zip(current_names, signal_names):
+            current = getattr(currents, current_name)
+            current.mean_value.name = f'currents_{signal_name}'  # Adjust the name
+            setattr(self.currents, signal_name, current)  # Create a sym-link
 
     # The 4 blade motor components
     top = Component(EpicsMotor, 'Top', name='top', kind='config')
