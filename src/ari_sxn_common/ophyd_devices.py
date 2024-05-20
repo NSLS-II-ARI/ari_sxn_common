@@ -266,9 +266,9 @@ class BaffleSlit(DeviceWithLocations):
         #    setattr(self.currents, signal_name, current)  # Create a sym-link
 
     # The 4 blade motor components
-    top = Component(EpicsMotor, 'top', name='top', kind='config')
-    bottom = Component(EpicsMotor, 'bottom', name='bottom', kind='config')
-    inboard = Component(EpicsMotor, 'inboard', name='inboard', kind='config')
-    outboard = Component(EpicsMotor, 'outboard', name='outboard', kind='config')
+    top = Component(EpicsMotor, 'Top', name='top', kind='config')
+    bottom = Component(EpicsMotor, 'Bottom', name='bottom', kind='config')
+    inboard = Component(EpicsMotor, 'Inboard', name='inboard', kind='config')
+    outboard = Component(EpicsMotor, 'Outboard', name='outboard', kind='config')
     # The current read-back of the 4 blades.
-    currents = Component(ID29EM, ':currents', name='currents', kind='hinted',)
+    currents = Component(ID29EM, 'Currents:', name='currents', kind='hinted')
