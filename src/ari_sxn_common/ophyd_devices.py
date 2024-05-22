@@ -1,6 +1,9 @@
 from ophyd import (Component, Device, EpicsMotor)
+from ophyd.areadetector.base import ADComponent
+from ophyd.areadetector.cam import ProsilicaDetectorCam
+from ophyd.areadetector.detectors import ProsilicaDetector
 from ophyd.quadem import NSLS_EM, QuadEMPort
-from ophyd.signal import InternalSignal
+from ophyd.signal import InternalSignal, EpicsSignalRO
 from ophyd.status import wait
 
 
@@ -272,3 +275,14 @@ class BaffleSlit(DeviceWithLocations):
     outboard = Component(EpicsMotor, 'Outboard', name='outboard', kind='config')
     # The current read-back of the 4 blades.
     currents = Component(ID29EM, 'Currents:', name='currents', kind='hinted')
+
+
+class ProsilicaNoTiff(ProsilicaDetector):
+    """
+    This is a class which adds the cam1.array_data attribute required when not
+    image saving.
+    """
+    class ProsilicaNoTiffCam(ProsilicaDetectorCam):
+        array_data = ADComponent(EpicsSignalRO, "ArrayData", kind='normal')
+
+    cam = Component(ProsilicaNoTiffCam, "cam1:")
