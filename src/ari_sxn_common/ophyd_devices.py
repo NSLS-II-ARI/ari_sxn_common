@@ -282,7 +282,11 @@ class ProsilicaNoTiff(ProsilicaDetector):
     This is a class which adds the cam1.array_data attribute required when not
     image saving.
     """
+    def __init__(self,*args,**kwargs):
+        super().__init__(*args, **kwargs)
+        self.cam.kind='normal'
+        self.cam.array_data.kind='normal'
     class ProsilicaNoTiffCam(ProsilicaDetectorCam):
         array_data = ADComponent(EpicsSignalRO, "ArrayData", kind='normal')
 
-    cam = Component(ProsilicaNoTiffCam, "cam1:")
+    cam = Component(ProsilicaNoTiffCam, "cam1:", kind='normal')
