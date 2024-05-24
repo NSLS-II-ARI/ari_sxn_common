@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from ophyd import (Component, Device, EpicsMotor)
 from ophyd.areadetector.base import ADComponent
 from ophyd.areadetector.cam import ProsilicaDetectorCam
@@ -287,6 +288,8 @@ class Prosilica(SingleTrigger, ProsilicaDetector):
         super().__init__(*args, **kwargs)
         self.cam.kind = 'normal'
         self.cam.array_data.kind = 'normal'
+        # adding this to mask an issue with the status object for self.cam.acquire never completing
+        self.stage_sigs = OrderedDict()
 
     class ProsilicaCam(ProsilicaDetectorCam):
         array_data = ADComponent(EpicsSignalRO, "ArrayData", kind='normal')
