@@ -1,6 +1,11 @@
+from collections import OrderedDict
 from ophyd import (Component, Device, EpicsMotor)
+from ophyd.areadetector.base import ADComponent
+from ophyd.areadetector.cam import ProsilicaDetectorCam
+from ophyd.areadetector.detectors import ProsilicaDetector
+from ophyd.areadetector.trigger_mixins import SingleTrigger
 from ophyd.quadem import NSLS_EM, QuadEMPort
-from ophyd.signal import InternalSignal
+from ophyd.signal import InternalSignal, EpicsSignalRO
 from ophyd.status import wait
 
 
@@ -272,3 +277,21 @@ class BaffleSlit(DeviceWithLocations):
     outboard = Component(EpicsMotor, 'Outboard', name='outboard', kind='config')
     # The current read-back of the 4 blades.
     currents = Component(ID29EM, 'Currents:', name='currents', kind='hinted')
+
+
+class Prosilica(SingleTrigger, ProsilicaDetector):
+    """
+    This is a class which adds the cam1.array_data attribute required when not
+    image saving.
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.cam.kind = 'normal'
+        self.cam.array_data.kind = 'normal'
+        # adding this to mask an issue with the status object for self.cam.acquire never completing
+        self.stage_sigs = OrderedDict()
+
+    class ProsilicaCam(ProsilicaDetectorCam):
+        array_data = ADComponent(EpicsSignalRO, "ArrayData", kind='normal')
+
+    cam = Component(ProsilicaCam, "cam1:", kind='normal')
