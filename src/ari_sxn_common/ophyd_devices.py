@@ -4,7 +4,7 @@ from ophyd.areadetector.cam import ProsilicaDetectorCam
 from ophyd.areadetector.detectors import ProsilicaDetector
 from ophyd.areadetector.trigger_mixins import SingleTrigger
 from ophyd.quadem import NSLS_EM, QuadEMPort
-from ophyd.signal import InternalSignal, EpicsSignalRO, EpicsSignalNoValidation
+from ophyd.signal import InternalSignal, EpicsSignalRO
 from ophyd.status import wait
 
 
@@ -42,28 +42,6 @@ class ID29EM(NSLS_EM):
                 device.kind = 'config'  # Set signal to 'config' for proper readback
             elif hasattr(device, 'kind'):
                 device.kind = 'omitted'  # set signal to 'omitted' for proper readback
-
-    def trigger(self):
-        """
-        Trigger one acquisition. This function is here to resolve an issue
-        whereby the built-in quadEM._status object defined by
-        quadEM.self._status_type(quadEM) never completes. will need to circle
-        back to why that doesn't work at a later date.
-        """
-        from ophyd.device import Staged
-        import time as ttime
-        if self._staged != Staged.yes:
-            raise RuntimeError(
-                "This detector is not ready to trigger."
-                "Call the stage() method before triggering."
-            )
-
-        #self._status = self._status_type(self)
-        self._status = self._acquisition_signal.set(1)
-        #self.generate_datum(self._image_name, ttime.time(), {})
-        return self._status
-
-    acquire = Component(EpicsSignalNoValidation, 'Acquire', kind='omitted')
 
 
 class Prosilica(SingleTrigger, ProsilicaDetector):
@@ -314,4 +292,3 @@ class BaffleSlit(DeviceWithLocations):
     outboard = Component(EpicsMotor, 'Outboard', name='outboard', kind='config')
     # The current read-back of the 4 blades.
     currents = Component(ID29EM, 'Currents:', name='currents', kind='hinted')
-
