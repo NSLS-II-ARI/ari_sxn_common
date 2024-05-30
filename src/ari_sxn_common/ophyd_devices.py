@@ -65,6 +65,24 @@ class ID29EM(NSLS_EM):
         return self._status
 
 
+class Prosilica(SingleTrigger, ProsilicaDetector):
+    """
+    This is a class which adds the cam1.array_data attribute required when not
+    image saving.
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.cam.kind = 'normal'
+        self.cam.array_data.kind = 'normal'
+        # adding this to mask an issue with the status object for self.cam.acquire never completing
+        # self.stage_sigs = OrderedDict()
+
+    class ProsilicaCam(ProsilicaDetectorCam):
+        array_data = ADComponent(EpicsSignalRO, "ArrayData", kind='normal')
+
+    cam = Component(ProsilicaCam, "cam1:", kind='normal')
+
+
 class DeviceWithLocations(Device):
     # noinspection GrazieInspection
     """
@@ -203,21 +221,35 @@ class Diagnostic(DeviceWithLocations):
     **kwargs : keyword arguments
         The keyword arguments passed to the parent 'Device' class
     """
-    def __init__(self, *args, name, locations_data=None, photodiode_signal=None,
-                 **kwargs):
+
+    def __init__(self, *args, name, locations_data=None, **kwargs):
         super().__init__(*args, name=name, locations_data=locations_data,
                          **kwargs)
+        # Update the 'name' of the self.camera.cam.array_data to something more useful
+        getattr(self,'camera.cam.array_data').name='diag_camera'
+        # names to give the ```currents.current*.mean_value``` in self.read*() dicts.
+        current_signals = {'current2': 'diag_photodiode'}
+        # the list of ```currents.current*``` attributes
+        current_names = ['current1', 'current2', 'current3', 'current4']
+        currents = getattr(self, 'currents')  # ```self.currents``` attr.
 
-        if photodiode_signal:
-            photodiode_signal.mean_value.name = f'{name}_photodiode'  # Adjust the name
-            setattr(self, 'photodiode', photodiode_signal)  # Create a sym-link
+        # for each of the current*.mean_value attrs (* = 1,2,3, or 4)
+        for current_name in current_names:
+            current = getattr(currents, current_name)
+            if current_name in current_signals.keys():
+                current.mean_value.name = current_signals[current_name]  # Adjust the name
+                setattr(self, current_signals[current_name], current)  # Create a sym-link
+            else:
+                current.mean_value.kind = 'omitted'  # Omit from reading any currents not used.
 
-    blade = Component(EpicsMotor, ':multi_trans', name='blade',
-                      kind='config')
-    filter = Component(EpicsMotor, ':yag_trans', name='filter',
-                       kind='config')
+    blade = Component(EpicsMotor, 'multi_trans', name='blade',
+                      kind='omitted')
+    filter = Component(EpicsMotor, 'yag_trans', name='filter',
+                       kind='omitted')
 
-    # camera = TO BE ADDED
+    currents = Component(ID29EM, 'Currents:', name='currents', kind='hinted')
+
+    camera = Component(Prosilica, 'Camera:', name='camera', kind='normal')
 
 
 class BaffleSlit(DeviceWithLocations):
@@ -277,21 +309,3 @@ class BaffleSlit(DeviceWithLocations):
     outboard = Component(EpicsMotor, 'Outboard', name='outboard', kind='config')
     # The current read-back of the 4 blades.
     currents = Component(ID29EM, 'Currents:', name='currents', kind='hinted')
-
-
-class Prosilica(SingleTrigger, ProsilicaDetector):
-    """
-    This is a class which adds the cam1.array_data attribute required when not
-    image saving.
-    """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.cam.kind = 'normal'
-        self.cam.array_data.kind = 'normal'
-        # adding this to mask an issue with the status object for self.cam.acquire never completing
-        self.stage_sigs = OrderedDict()
-
-    class ProsilicaCam(ProsilicaDetectorCam):
-        array_data = ADComponent(EpicsSignalRO, "ArrayData", kind='normal')
-
-    cam = Component(ProsilicaCam, "cam1:", kind='normal')
