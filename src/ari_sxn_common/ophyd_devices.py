@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from ophyd import (Component, Device, EpicsMotor)
 from ophyd.areadetector.base import ADComponent
 from ophyd.areadetector.cam import ProsilicaDetectorCam
@@ -74,8 +73,6 @@ class Prosilica(SingleTrigger, ProsilicaDetector):
         super().__init__(*args, **kwargs)
         self.cam.kind = 'normal'
         self.cam.array_data.kind = 'normal'
-        # adding this to mask an issue with the status object for self.cam.acquire never completing
-        # self.stage_sigs = OrderedDict()
 
     class ProsilicaCam(ProsilicaDetectorCam):
         array_data = ADComponent(EpicsSignalRO, "ArrayData", kind='normal')
@@ -226,9 +223,9 @@ class Diagnostic(DeviceWithLocations):
         super().__init__(*args, name=name, locations_data=locations_data,
                          **kwargs)
         # Update the 'name' of the self.camera.cam.array_data to something more useful
-        getattr(self,'camera.cam.array_data').name='diag_camera'
+        getattr(self, 'camera.cam.array_data').name = 'diag_camera'
         # names to give the ```currents.current*.mean_value``` in self.read*() dicts.
-        current_signals = {'current2': 'diag_photodiode'}
+        current_signals = {'current2': 'photodiode'}
         # the list of ```currents.current*``` attributes
         current_names = ['current1', 'current2', 'current3', 'current4']
         currents = getattr(self, 'currents')  # ```self.currents``` attr.
@@ -237,7 +234,7 @@ class Diagnostic(DeviceWithLocations):
         for current_name in current_names:
             current = getattr(currents, current_name)
             if current_name in current_signals.keys():
-                current.mean_value.name = current_signals[current_name]  # Adjust the name
+                current.mean_value.name = f'diag_{current_signals[current_name]}'  # Adjust the name
                 setattr(self, current_signals[current_name], current)  # Create a sym-link
             else:
                 current.mean_value.kind = 'omitted'  # Omit from reading any currents not used.
@@ -291,16 +288,20 @@ class BaffleSlit(DeviceWithLocations):
         super().__init__(*args, name=name, locations_data=locations_data,
                          **kwargs)
         # names to give the ```currents.current*.mean_value``` in self.read*() dicts.
-        signal_names = ['top', 'bottom', 'inboard', 'outboard']
+        current_signals = {'current1': 'top', 'current2': 'bottom',
+                           'current3': 'inboard', 'current4': 'outboard'}
         # the list of ```currents.current*``` attributes
         current_names = ['current1', 'current2', 'current3', 'current4']
         currents = getattr(self, 'currents')  # ```self.currents``` attr.
 
         # for each of the current*.mean_value attrs (* = 1,2,3, or 4)
-        for current_name, signal_name in zip(current_names, signal_names):
+        for current_name in current_names:
             current = getattr(currents, current_name)
-            current.mean_value.name = f'currents_{signal_name}'  # Adjust the name
-            setattr(self.currents, signal_name, current)  # Create a sym-link
+            if current_name in current_signals.keys():
+                current.mean_value.name = f'currents_{current_signals[current_name]}'  # Adjust the name
+                setattr(self.currents, current_signals[current_name], current)  # Create a sym-link
+            else:
+                current.mean_value.kind = 'omitted'  # Omit from reading any currents not used.
 
     # The 4 blade motor components
     top = Component(EpicsMotor, 'Top', name='top', kind='config')
