@@ -4,7 +4,7 @@ from ophyd.areadetector.cam import ProsilicaDetectorCam
 from ophyd.areadetector.detectors import ProsilicaDetector
 from ophyd.areadetector.trigger_mixins import SingleTrigger
 from ophyd.quadem import NSLS_EM, QuadEMPort
-from ophyd.signal import InternalSignal, EpicsSignalRO
+from ophyd.signal import InternalSignal, EpicsSignalRO, EpicsSignalNoValidation
 from ophyd.status import wait
 
 
@@ -26,8 +26,8 @@ class ID29EM(NSLS_EM):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Set the correct value for acquire mode when staging.
-        self.stage_sigs.update([(self.acquire_mode, 'Single')])
+        # Remove acquire check from staging as this causes a problem with 'self.unstage()'.
+        self.stage_sigs.pop('acquire')
         # Generate a list of signals and sub-devices for this qem
         signals_list = [(signal.dotted_name, signal.item)
                         for signal in self.walk_signals()
@@ -58,10 +58,12 @@ class ID29EM(NSLS_EM):
                 "Call the stage() method before triggering."
             )
 
-        # self._status = self._status_type(self)
+        #self._status = self._status_type(self)
         self._status = self._acquisition_signal.set(1)
-        self.generate_datum(self._image_name, ttime.time(), {})
+        #self.generate_datum(self._image_name, ttime.time(), {})
         return self._status
+
+    acquire = Component(EpicsSignalNoValidation, 'Acquire', kind='omitted')
 
 
 class Prosilica(SingleTrigger, ProsilicaDetector):
