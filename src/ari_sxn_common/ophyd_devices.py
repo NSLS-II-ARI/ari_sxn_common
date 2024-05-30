@@ -289,6 +289,7 @@ class BaffleSlit(DeviceWithLocations):
     def __init__(self, *args, name, locations_data=None, **kwargs):
         super().__init__(*args, name=name, locations_data=locations_data,
                          **kwargs)
+
         # names to give the ```currents.current*.mean_value``` in self.read*() dicts.
         current_signals = {'current1': 'top', 'current2': 'bottom',
                            'current3': 'inboard', 'current4': 'outboard'}
@@ -300,8 +301,9 @@ class BaffleSlit(DeviceWithLocations):
         for current_name in current_names:
             current = getattr(currents, current_name)
             if current_name in current_signals.keys():
-                current.mean_value.name = f'currents_{current_signals[current_name]}'  # Adjust the name
-                setattr(self.currents, current_signals[current_name], current)  # Create a sym-link
+                current.mean_value.name = (f'{self.name}_currents_'
+                                           f'{current_signals[current_name]}')  # Adjust the name
+                setattr(currents, current_signals[current_name], current)  # Create a sym-link
             else:
                 current.mean_value.kind = 'omitted'  # Omit from reading any currents not used.
 
@@ -312,3 +314,4 @@ class BaffleSlit(DeviceWithLocations):
     outboard = Component(EpicsMotor, 'Outboard', name='outboard', kind='config')
     # The current read-back of the 4 blades.
     currents = Component(ID29EM, 'Currents:', name='currents', kind='hinted')
+
