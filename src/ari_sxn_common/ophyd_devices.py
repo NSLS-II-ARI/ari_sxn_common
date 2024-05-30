@@ -228,6 +228,18 @@ class Diagnostic(DeviceWithLocations):
 
     camera = Component(Prosilica, 'Camera:', name='camera', kind='normal')
 
+    def trigger(self):
+        '''
+        A trigger functions that includes a call to trigger the currents quad_em
+        '''
+
+        currents_status = self.currents.trigger()
+        camera_status = self.camera.trigger()
+        for status in [currents_status,camera_status]:  # Wait for each move to finish
+            wait(status)
+
+        return super().trigger()
+
 
 class BaffleSlit(DeviceWithLocations):
     """
@@ -292,3 +304,11 @@ class BaffleSlit(DeviceWithLocations):
     outboard = Component(EpicsMotor, 'Outboard', name='outboard', kind='config')
     # The current read-back of the 4 blades.
     currents = Component(ID29EM, 'Currents:', name='currents', kind='hinted')
+
+    def trigger(self):
+        '''
+        A trigger functions that includes a call to trigger the currents quad_em
+        '''
+
+        self.currents.trigger().wait()
+        return super().trigger()
