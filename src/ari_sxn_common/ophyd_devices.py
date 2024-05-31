@@ -239,11 +239,12 @@ class Diagnostic(DeviceWithLocations):
         # trigger the child components that need it
         currents_status = self.currents.trigger()
         camera_status = self.camera.trigger()
+        super_status = super().trigger()
         # Note I am not sure why but wait(currents_status, camera_status) doesn't work.
-        for status in [currents_status,camera_status]:  # Wait for each move to finish
+        for status in [currents_status,camera_status, super_status]:  # Wait for each move to finish
             wait(status)
 
-        return super().trigger()
+        return super_status
 
 
 class BaffleSlit(DeviceWithLocations):
@@ -315,5 +316,10 @@ class BaffleSlit(DeviceWithLocations):
         A trigger functions that includes a call to trigger the currents quad_em
         '''
 
-        self.currents.trigger().wait()
-        return super().trigger()
+        currents_status = self.currents.trigger()
+        super_status = super().trigger()
+        # Note I am not sure why but wait(currents_status, camera_status) doesn't work.
+        for status in [currents_status, super_status]:  # Wait for each move to finish
+            wait(status)
+
+        return super_status
