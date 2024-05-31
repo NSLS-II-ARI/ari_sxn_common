@@ -158,6 +158,7 @@ class DeviceWithLocations(Device):
         status_list = []
         for motor, data in location_data.items():
             status_list.append(getattr(self, motor).set(data[0]))
+        # Note I am not sure why but wait(*status_list) doesn't work.
         for status in status_list:  # Wait for each move to finish
             wait(status)
 
@@ -238,6 +239,7 @@ class Diagnostic(DeviceWithLocations):
         # trigger the child components that need it
         currents_status = self.currents.trigger()
         camera_status = self.camera.trigger()
+        # Note I am not sure why but wait(currents_status, camera_status) doesn't work.
         for status in [currents_status,camera_status]:  # Wait for each move to finish
             wait(status)
 
