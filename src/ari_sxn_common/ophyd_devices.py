@@ -233,6 +233,9 @@ class Diagnostic(DeviceWithLocations):
         A trigger functions that includes a call to trigger the currents quad_em
         '''
 
+        # This appears to resolve a connection time-out error but I have no idea why.
+        counter_value = self.camera.cam.array_counter.read()
+        # trigger the child components that need it
         currents_status = self.currents.trigger()
         camera_status = self.camera.trigger()
         for status in [currents_status,camera_status]:  # Wait for each move to finish
