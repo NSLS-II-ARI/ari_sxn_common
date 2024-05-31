@@ -240,11 +240,10 @@ class Diagnostic(DeviceWithLocations):
         currents_status = self.currents.trigger()
         camera_status = self.camera.trigger()
         super_status = super().trigger()
-        # Note I am not sure why but wait(currents_status, camera_status) doesn't work.
-        for status in [currents_status,camera_status, super_status]:  # Wait for each move to finish
-            wait(status)
 
-        return super_status
+        output_status = currents_status & camera_status & super_status
+
+        return output_status
 
 
 class BaffleSlit(DeviceWithLocations):
@@ -318,8 +317,6 @@ class BaffleSlit(DeviceWithLocations):
 
         currents_status = self.currents.trigger()
         super_status = super().trigger()
-        # Note I am not sure why but wait(currents_status, camera_status) doesn't work.
-        for status in [currents_status, super_status]:  # Wait for each move to finish
-            wait(status)
 
-        return super_status
+        output_status = currents_status & super_status
+        return output_status
