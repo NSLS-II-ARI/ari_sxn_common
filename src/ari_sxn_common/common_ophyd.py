@@ -213,11 +213,11 @@ class Diagnostic(DeviceWithLocations):
                 current.mean_value.kind = 'omitted'  # Omit from reading any currents not used.
 
     blade = Component(EpicsMotor, 'multi_trans', name='blade',
-                      kind='omitted')
+                      kind='normal')
     filter = Component(EpicsMotor, 'yag_trans', name='filter',
-                       kind='omitted')
+                       kind='normal')
 
-    currents = Component(ID29EM, 'Currents:', name='currents', kind='hinted')
+    currents = Component(ID29EM, 'Currents:', name='currents', kind='normal')
 
     camera = Component(Prosilica, 'Camera:', name='camera', kind='normal')
 
@@ -281,12 +281,12 @@ class BaffleSlit(DeviceWithLocations):
                 current.mean_value.kind = 'omitted'  # Omit from reading any currents not used.
 
     # The 4 blade motor components
-    top = Component(EpicsMotor, 'Top', name='top', kind='config')
-    bottom = Component(EpicsMotor, 'Bottom', name='bottom', kind='config')
-    inboard = Component(EpicsMotor, 'Inboard', name='inboard', kind='config')
-    outboard = Component(EpicsMotor, 'Outboard', name='outboard', kind='config')
+    top = Component(EpicsMotor, 'Top', name='top', kind='normal')
+    bottom = Component(EpicsMotor, 'Bottom', name='bottom', kind='normal')
+    inboard = Component(EpicsMotor, 'Inboard', name='inboard', kind='normal')
+    outboard = Component(EpicsMotor, 'Outboard', name='outboard', kind='normal')
     # The current read-back of the 4 blades.
-    currents = Component(ID29EM, 'Currents:', name='currents', kind='hinted')
+    currents = Component(ID29EM, 'Currents:', name='currents', kind='normal')
 
     def trigger(self):
         '''
