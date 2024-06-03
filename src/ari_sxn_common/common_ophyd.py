@@ -55,6 +55,9 @@ class Prosilica(SingleTrigger, ProsilicaDetector):
         self.cam.array_data.kind = 'normal'
 
     class ProsilicaCam(ProsilicaDetectorCam):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+
         array_data = ADComponent(EpicsSignalRO, "ArrayData", kind='normal')
 
     cam = Component(ProsilicaCam, "cam1:", kind='normal')
@@ -204,7 +207,7 @@ class Diagnostic(DeviceWithLocations):
         super().__init__(*args, name=name, locations_data=locations_data,
                          **kwargs)
         # Update the 'name' of the self.camera.cam.array_data to something more useful
-        getattr(self, 'camera.cam.array_data').name = 'diag_camera'
+        getattr(self, 'camera.cam.array_data').name = f'{self.name}_camera'
         # names to give the ```currents.current*.mean_value``` in self.read*() dicts.
         current_signals = {'current2': 'photodiode'}
         # the list of ```currents.current*``` attributes
@@ -215,7 +218,7 @@ class Diagnostic(DeviceWithLocations):
         for current_name in current_names:
             current = getattr(currents, current_name)
             if current_name in current_signals.keys():
-                current.mean_value.name = f'diag_{current_signals[current_name]}'  # Adjust the name
+                current.mean_value.name = f'{self.name}_{current_signals[current_name]}'  # Adjust the name
                 setattr(self, current_signals[current_name], current)  # Create a sym-link
             else:
                 current.mean_value.kind = 'omitted'  # Omit from reading any currents not used.
