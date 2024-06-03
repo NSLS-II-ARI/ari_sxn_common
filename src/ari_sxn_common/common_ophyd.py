@@ -231,7 +231,7 @@ class Diagnostic(DeviceWithLocations):
 
     def trigger(self):
         '''
-        A trigger functions that includes a call to trigger the currents quad_em
+        A trigger functions that also triggers the currents quad_em and camera
         '''
 
         # This appears to resolve a connection time-out error but I have no idea why.
