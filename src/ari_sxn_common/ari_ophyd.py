@@ -38,6 +38,9 @@ class M1(Device):
         A trigger function that adds triggering of the baffleslit and diagnostic
         '''
 
+        # This appears to resolve a connection time-out error but I have no idea why.
+        counter_value = self.diag.camera.cam.array_counter.read()
+
         # trigger the child components that need it
         baffle_status = self.baffle.trigger()
         diag_status = self.diag.trigger()
