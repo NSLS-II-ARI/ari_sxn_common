@@ -189,23 +189,12 @@ class Diagnostic(DeviceWithLocations):
     ----------
     *args : arguments
         The arguments passed to the parent 'DeviceWithLocations' class
-    locations_data : {str: {str:(float, float), ...}, ...}, optional.
-        A dictionary mapping the names of 'locations' to a dictionary mapping
-        the 'motor name' to a (location position, location precision) tuple for
-        the corresponding location. These are used in the 'set_location'
-        method on the diagnostic device to quickly move between locations/
-        setups for the diagnostic. 'location position' is the value that the
-        corresponding 'motor name' axis should be set to when moving to
-        'location'. 'location precision' is used to determine if the device
-        is in 'location' by seeing if the 'motor name's 'current position'
-        is within +/- 'location precision' of 'location position'.
     **kwargs : keyword arguments
         The keyword arguments passed to the parent 'Device' class
     """
 
-    def __init__(self, *args, name, locations_data=None, **kwargs):
-        super().__init__(*args, name=name, locations_data=locations_data,
-                         **kwargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         # Update the 'name' of the self.camera.cam.array_data to something more useful
         getattr(self, 'camera.cam.array_data').name = f'{self.name}_camera'
         # names to give the ```currents.current*.mean_value``` in self.read*() dicts.
@@ -267,26 +256,12 @@ class BaffleSlit(DeviceWithLocations):
     ----------
     *args : arguments
         The arguments passed to the grandparent 'Device' class
-    name : str
-        The 'name' argument passed through to the grandparent 'Device' class
-    locations_data : {str: {str:(float, float), ...}, ...}
-        A dictionary mapping the names of 'locations' to a dictionary mapping
-        the 'motor name' to a (location position, location precision) tuple for
-        the corresponding location. These are used in the 'set_location'
-        method on the diagnostic device to quickly move between locations/
-        setups for the baffle slit. 'location position' is the value that the
-        corresponding 'motor name' axis should be set to when moving to
-        'location'. 'location precision' is used to determine if the device
-        is in 'location' by seeing if the 'motor name's 'current position'
-        is within +/- 'location precision' of 'location position'. This is
-        passed through to the parent 'DeviceWithLocations' class.
     **kwargs : keyword arguments
         The keyword arguments passed to the grandparent 'Device' class
     """
 
-    def __init__(self, *args, name, locations_data=None, **kwargs):
-        super().__init__(*args, name=name, locations_data=locations_data,
-                         **kwargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         # names to give the ```currents.current*.mean_value``` in self.read*() dicts.
         current_signals = {'current1': 'top', 'current2': 'bottom',
