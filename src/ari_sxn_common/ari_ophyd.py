@@ -15,17 +15,17 @@ class M1(Device):
 
     # Mirror motor axes
     Ry_coarse = Component(EpicsMotor, 'Ry_coarse', name='Ry_coarse',
-                          kind='config')
+                          kind='normal')
     Ry_fine = Component(EpicsMotor, 'Ry_fine', name='Ry_fine',
-                        kind='config')
-    Rz = Component(EpicsMotor, 'Rz', name='Rz', kind='config')
-    x = Component(EpicsMotor, 'x', name='x', kind='config')
-    y = Component(EpicsMotor, 'y', name='y', kind='config')
+                        kind='normal')
+    Rz = Component(EpicsMotor, 'Rz', name='Rz', kind='normal')
+    x = Component(EpicsMotor, 'x', name='x', kind='normal')
+    y = Component(EpicsMotor, 'y', name='y', kind='normal')
 
     # Mirror chamber vacuum axes
-    ccg = Component(EpicsSignalRO, "ccg", name='ccg', kind='config')
-    tcg = Component(EpicsSignalRO, "tcg", name='tcg', kind='config')
-    ip = Component(EpicsSignalRO, "ip", name='ip', kind='config')
+    ccg = Component(EpicsSignalRO, "ccg", name='ccg', kind='normal')
+    tcg = Component(EpicsSignalRO, "tcg", name='tcg', kind='normal')
+    ip = Component(EpicsSignalRO, "ip", name='ip', kind='normal')
 
     # baffle slit sub-device
     baffle = Component(BaffleSlit, "baffle:", name='baffle', kind='normal')
