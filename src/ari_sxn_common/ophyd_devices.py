@@ -5,7 +5,6 @@ from ophyd.areadetector.detectors import ProsilicaDetector
 from ophyd.areadetector.trigger_mixins import SingleTrigger
 from ophyd.quadem import NSLS_EM, QuadEMPort
 from ophyd.signal import Signal, EpicsSignalRO
-from ophyd.status import wait
 
 
 class ID29EM(NSLS_EM):
@@ -239,6 +238,18 @@ class DeviceWithLocations(Device):
 
             return output_status
 
+        def available(self):
+            """
+            A method that returns the list of available locations for set and get.
+
+            Returns
+            -------
+            self.parent._locations_data.keys() : list
+                The list of 'locations' that this device has defined.
+            """
+
+            return list(self.parent._locations_data.keys())
+
     def __init__(self, *args, locations_data=None, **kwargs):
         """
         Initializes the DeviceWithLocations device class, passing *args
@@ -250,30 +261,6 @@ class DeviceWithLocations(Device):
         if locations_data is None:
             locations_data = {}
         self._locations_data = locations_data
-
-    @property  # An attribute that returns what locations are available.
-    def available_locations(self):
-        return list(self._locations_data.keys())
-
-    def set_location(self, location):
-        """
-        A method that will move the device to 'location' if location is
-        in self.available_locations.
-        """
-        try:
-            location_data = self._locations_data[location]
-        except KeyError as exc:  # raise KeyError with a more helpful traceback message
-            traceback_str = (f'A call to {self.name}.set_location expected '
-                             f'input, {location}, to be in '
-                             f'{list(self._locations_data.keys())}')
-            raise KeyError(traceback_str) from exc
-
-        # Move all the required 'axes' to their locations in parallel.
-        status_list = []
-        for motor, data in location_data.items():
-            status_list.append(getattr(self, motor).set(data[0]))
-        for status in status_list:  # Wait for each move to finish
-            wait(status)
 
     locations = Component(LocationSignal, value=[], name='locations',
                           kind='config')
