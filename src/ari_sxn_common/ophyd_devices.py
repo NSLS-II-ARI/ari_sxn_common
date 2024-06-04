@@ -132,6 +132,24 @@ class DeviceWithLocations(Device):
         """
 
         def get(self, **kwargs):
+            """
+            Get method that returns a list of 'locations' that the device is 'in'
+
+            This is a modified get method that looks through self.parent._locations_data
+            to check if the device is 'in' each of the locations and then 'puts' a list
+            of locations where this is true. After this it returns super().get(**kwargs)
+            to ensure that any important information is not lost.
+
+            Parameters
+            ----------
+            **kwargs : keyword arguments
+                kwargs passed through to super().get(**kwargs)
+
+            Returns
+            -------
+            super().get(**kwargs) :
+                Returns the result of super().get(**kwargs)
+            """
             # Determine the locations we are currently 'in'.
             locations = []
             # Note the next line gives an 'accessing a protected member, _locations_data'
@@ -144,6 +162,19 @@ class DeviceWithLocations(Device):
             self.put(locations, internal=True)  # Set the value at read time.
 
             return super().get(**kwargs)  # run the parent get function.
+
+        def set(self, value, **kwargs):
+            """
+
+            Parameters
+            ----------
+            value
+            kwargs
+
+            Returns
+            -------
+
+            """
 
     def __init__(self, *args, locations_data=None, **kwargs):
         """
