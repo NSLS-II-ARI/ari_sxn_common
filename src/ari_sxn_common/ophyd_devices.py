@@ -105,14 +105,15 @@ class DeviceWithLocations(Device):
             The arguments passed to the parent 'Device' class
         locations_data : {str: {str:(float, float), ...}, ...}, optional.
             A dictionary mapping the names of 'locations' to a dictionary mapping
-            the 'motor name' to a (location position, location precision) tuple for
+            the 'signal name' to a (location position, location precision) tuple for
             the corresponding location. These are used in the 'set_location'
             method on the diagnostic device to quickly move between locations/
             setups for the diagnostic. 'location position' is the value that the
-            corresponding 'motor name' axis should be set to when moving to
+            corresponding 'signal name' axis should be set to when moving to
             'location'. 'location precision' is used to determine if the device
-            is in 'location' by seeing if the 'motor name's 'current position'
-            is within +/- 'location precision' of 'location position'
+            is in 'location' by seeing if the 'signal name's 'current position'
+            is within +/- 'location precision' of 'location position. For str
+            or int signals this value is ignored but should be set as 'None'.
         **kwargs : keyword arguments
             The keyword arguments passed to the parent 'Device' class
         """
@@ -162,9 +163,8 @@ class DeviceWithLocations(Device):
             for location, location_data in self.parent._locations_data.items():
                 value_check = []
                 for signal_name, data in location_data.items():
-                    # note below tries motor.position and then motor.value to work with
-                    # 'positioners' and 'signals'
-                    print (f'signal_name = {signal_name}')
+                    # note below tries signal.position and then signal.value to work with
+                    # 'positioners' and 'signals' that return floats, ints or strings
                     signal = getattr(self.parent, signal_name)
                     if hasattr(signal, 'position'):
                         value = getattr(signal, 'position')
@@ -178,12 +178,13 @@ class DeviceWithLocations(Device):
                                              f'supported attributes are '
                                              f'{self.parent.name}{signal_name}.position and '
                                              f'{self.parent.name}{signal_name}.value')
+
                     if isinstance(value, float):  # for float values
                         value_check.append(data[0] - data[1] < value < data[0] + data[1])
                     elif isinstance(getattr(self.parent, signal_name)):
                         # This implies the signal is a child DeviceWithLocation LocationSignal
                         value_check.append(data[0] in value)  # takes care of child
-                    elif isinstance(value, (int, str)): # for string or int values
+                    elif isinstance(value, (int, str)):  # for string or int values
                         value_check.append(data[0] == value)
                     else:
                         raise ValueError(f'during a call to {self.parent.name}.locations.get()'
