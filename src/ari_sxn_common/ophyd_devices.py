@@ -140,6 +140,11 @@ class DeviceWithLocations(Device):
             of locations where this is true. After this it returns super().get(**kwargs)
             to ensure that any important information is not lost.
 
+            Note, the put at the end is done during the 'get' instead of during the 'set' as
+            each of the motors/signals could be independently moved without passing through
+            the 'set' function. This does result in the case where using 'locations.value'
+            does not guarantee an up to date value so take care.
+
             Parameters
             ----------
             **kwargs : keyword arguments
@@ -155,10 +160,40 @@ class DeviceWithLocations(Device):
             # Note the next line gives an 'accessing a protected member, _locations_data'
             # warning in my editor. I am accepting the risk !-).
             for location, location_data in self.parent._locations_data.items():
-                if all([(data[0] - data[1] < getattr(self.parent, motor).position <
-                         data[0] + data[1])
-                        for motor, data in location_data.items()]):
+                value_check = []
+                for signal_name, data in location_data.items():
+                    # note below tries motor.position and then motor.value to work with
+                    # 'positioners' and 'signals'
+                    print (f'signal_name = {signal_name}')
+                    signal = getattr(self.parent, signal_name)
+                    if hasattr(signal, 'position'):
+                        value = getattr(signal, 'position')
+                    elif hasattr(signal, 'value'):
+                        value = getattr(signal, 'value')
+                    else:
+                        raise AttributeError(f'during a call to {self.parent}.locations.get()'
+                                             f'a signal ({signal_name}) from '
+                                             f'{self.parent.name}._location_data was found to '
+                                             f'not have a supported attribute. Presently '
+                                             f'supported attributes are '
+                                             f'{self.parent.name}{signal_name}.position and '
+                                             f'{self.parent.name}{signal_name}.value')
+                    if isinstance(value, float):  # for float values
+                        value_check.append(data[0] - data[1] < value < data[0] + data[1])
+                    elif isinstance(getattr(self.parent, signal_name)):
+                        # This implies the signal is a child DeviceWithLocation LocationSignal
+                        value_check.append(data[0] in value)  # takes care of child
+                    elif isinstance(value, (int, str)): # for string or int values
+                        value_check.append(data[0] == value)
+                    else:
+                        raise ValueError(f'during a call to {self.parent.name}.locations.get()'
+                                         f'a value ({value}) from '
+                                         f'{self.parent.name}._location_data was found to '
+                                         f'be a non-supported data-type. Presently '
+                                         f'supported data-types are floats, ints and strings')
+                if all(value_check):
                     locations.append(location)
+
             self.put(locations, internal=True)  # Set the value at read time.
 
             return super().get(**kwargs)  # run the parent get function.
