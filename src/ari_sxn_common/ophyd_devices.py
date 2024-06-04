@@ -4,7 +4,7 @@ from ophyd.areadetector.cam import ProsilicaDetectorCam
 from ophyd.areadetector.detectors import ProsilicaDetector
 from ophyd.areadetector.trigger_mixins import SingleTrigger
 from ophyd.quadem import NSLS_EM, QuadEMPort
-from ophyd.signal import InternalSignal, EpicsSignalRO
+from ophyd.signal import Signal, EpicsSignalRO
 from ophyd.status import wait
 
 
@@ -118,7 +118,7 @@ class DeviceWithLocations(Device):
             The keyword arguments passed to the parent 'Device' class
         """
 
-    class LocationSignal(InternalSignal):
+    class LocationSignal(Signal):
         """
         An InternalSignal class to be used for updating the 'location' signal
 
@@ -195,22 +195,49 @@ class DeviceWithLocations(Device):
                 if all(value_check):
                     locations.append(location)
 
-            self.put(locations, internal=True)  # Set the value at read time.
+            self.put(locations)  # Set the value at read time.
 
             return super().get(**kwargs)  # run the parent get function.
 
         def set(self, value, **kwargs):
             """
+            A set method that moves all specified signals to a 'location'
+
+            This method extracts location data using value as a key of
+            the self.parent._locations_data dictionary and then uses
+            this location data to move all necessary signals to their
+            desired locations.
 
             Parameters
             ----------
-            value
-            kwargs
+            value : str,
+                The name of the location that the parent device should
+                be moved to.
+            kwargs : dict
+                The kwargs to be passed through to the super().set()
+                method.
 
             Returns
             -------
-
+            output_status : Status
+                The combined status object for all of the required sets.
             """
+            try:
+                location_data = self.parent._locations_data[value]
+            except KeyError as exc:  # raise KeyError with a more helpful traceback message
+                traceback_str = (f'A call to {self.name}.set() expected input, {value}, '
+                                 f'to be in {list(self.parent._locations_data.keys())}')
+                raise KeyError(traceback_str) from exc
+
+            # Move all the required 'axes' to their locations in parallel.
+            status_list = [super().set(value, **kwargs)]
+            for signal, data in location_data.items():
+                status_list.append(status_list[-1] & getattr(self.parent, signal).set(data[0]))
+
+            status_list[0].set_finished()  # The super().set() status never completes????
+            output_status = status_list[-1]
+
+            return output_status
 
     def __init__(self, *args, locations_data=None, **kwargs):
         """
