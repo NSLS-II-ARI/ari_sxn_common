@@ -32,9 +32,9 @@ class M1(Device):
     y = Component(EpicsMotor, 'y', name='y', kind='normal')
 
     # Mirror chamber vacuum axes
-    ccg = Component(EpicsSignalRO, "ccg", name='ccg', kind='normal')
-    tcg = Component(EpicsSignalRO, "tcg", name='tcg', kind='normal')
-    ip = Component(EpicsSignalRO, "ip", name='ip', kind='normal')
+    ccg = Component(EpicsSignalRO, "ccg", name='ccg', kind='config')
+    tcg = Component(EpicsSignalRO, "tcg", name='tcg', kind='config')
+    ip = Component(EpicsSignalRO, "ip", name='ip', kind='config')
 
     # baffle slit sub-device
     slits = Component(BaffleSlit, "baffle:", name='slits', kind='normal')
