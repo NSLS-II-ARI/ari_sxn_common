@@ -37,7 +37,7 @@ class M1(Device):
     ip = Component(EpicsSignalRO, "ip", name='ip', kind='normal')
 
     # baffle slit sub-device
-    baffle = Component(BaffleSlit, "baffle:", name='baffle', kind='normal')
+    slits = Component(BaffleSlit, "baffle:", name='slits', kind='normal')
 
     # diagnostic sub-device
     diag = Component(Diagnostic, "diag:", name='diag', kind='normal')
