@@ -4,8 +4,7 @@ from ophyd.areadetector.cam import ProsilicaDetectorCam
 from ophyd.areadetector.detectors import ProsilicaDetector
 from ophyd.areadetector.trigger_mixins import SingleTrigger
 from ophyd.quadem import NSLS_EM, QuadEMPort
-from ophyd.signal import InternalSignal, EpicsSignalRO
-from ophyd.status import wait
+from ophyd.signal import Signal, EpicsSignalRO
 
 
 class ID29EM(NSLS_EM):
@@ -88,19 +87,20 @@ class DeviceWithLocations(Device):
             The arguments passed to the parent 'Device' class
         locations_data : {str: {str:(float, float), ...}, ...}, optional.
             A dictionary mapping the names of 'locations' to a dictionary mapping
-            the 'motor name' to a (location position, location precision) tuple for
+            the 'signal name' to a (location position, location precision) tuple for
             the corresponding location. These are used in the 'set_location'
             method on the diagnostic device to quickly move between locations/
             setups for the diagnostic. 'location position' is the value that the
-            corresponding 'motor name' axis should be set to when moving to
+            corresponding 'signal name' axis should be set to when moving to
             'location'. 'location precision' is used to determine if the device
-            is in 'location' by seeing if the 'motor name's 'current position'
-            is within +/- 'location precision' of 'location position'
+            is in 'location' by seeing if the 'signal name's 'current position'
+            is within +/- 'location precision' of 'location position. For str
+            or int signals this value is ignored but should be set as 'None'.
         **kwargs : keyword arguments
             The keyword arguments passed to the parent 'Device' class
         """
 
-    class LocationSignal(InternalSignal):
+    class LocationSignal(Signal):
         """
         An InternalSignal class to be used for updating the 'location' signal
 
@@ -115,18 +115,123 @@ class DeviceWithLocations(Device):
         """
 
         def get(self, **kwargs):
+            """
+            Get method that returns a list of 'locations' that the device is 'in'
+
+            This is a modified get method that looks through self.parent._locations_data
+            to check if the device is 'in' each of the locations and then 'puts' a list
+            of locations where this is true. After this it returns super().get(**kwargs)
+            to ensure that any important information is not lost.
+
+            Note, the put at the end is done during the 'get' instead of during the 'set' as
+            each of the motors/signals could be independently moved without passing through
+            the 'set' function. This does result in the case where using 'locations.value'
+            does not guarantee an up to date value so take care.
+
+            Parameters
+            ----------
+            **kwargs : keyword arguments
+                kwargs passed through to super().get(**kwargs)
+
+            Returns
+            -------
+            super().get(**kwargs) :
+                Returns the result of super().get(**kwargs)
+            """
             # Determine the locations we are currently 'in'.
             locations = []
             # Note the next line gives an 'accessing a protected member, _locations_data'
             # warning in my editor. I am accepting the risk !-).
             for location, location_data in self.parent._locations_data.items():
-                if all([(data[0] - data[1] < getattr(self.parent, motor).position <
-                         data[0] + data[1])
-                        for motor, data in location_data.items()]):
+                value_check = []
+                for signal_name, data in location_data.items():
+                    # note below tries signal.position and then signal.value to work with
+                    # 'positioners' and 'signals' that return floats, ints or strings
+                    signal = getattr(self.parent, signal_name)
+                    if hasattr(signal, 'position'):
+                        value = getattr(signal, 'position')
+                    elif hasattr(signal, 'value'):
+                        value = getattr(signal, 'value')
+                    else:
+                        raise AttributeError(f'during a call to {self.parent}.locations.get()'
+                                             f'a signal ({signal_name}) from '
+                                             f'{self.parent.name}._location_data was found to '
+                                             f'not have a supported attribute. Presently '
+                                             f'supported attributes are '
+                                             f'{self.parent.name}{signal_name}.position and '
+                                             f'{self.parent.name}{signal_name}.value')
+
+                    if isinstance(value, float):  # for float values
+                        value_check.append(data[0] - data[1] < value < data[0] + data[1])
+                    elif isinstance(getattr(self.parent, signal_name)):
+                        # This implies the signal is a child DeviceWithLocation LocationSignal
+                        value_check.append(data[0] in value)  # takes care of child
+                    elif isinstance(value, (int, str)):  # for string or int values
+                        value_check.append(data[0] == value)
+                    else:
+                        raise ValueError(f'during a call to {self.parent.name}.locations.get()'
+                                         f'a value ({value}) from '
+                                         f'{self.parent.name}._location_data was found to '
+                                         f'be a non-supported data-type. Presently '
+                                         f'supported data-types are floats, ints and strings')
+                if all(value_check):
                     locations.append(location)
-            self.put(locations, internal=True)  # Set the value at read time.
+
+            self.put(locations)  # Set the value at read time.
 
             return super().get(**kwargs)  # run the parent get function.
+
+        def set(self, value, **kwargs):
+            """
+            A set method that moves all specified signals to a 'location'
+
+            This method extracts location data using value as a key of
+            the self.parent._locations_data dictionary and then uses
+            this location data to move all necessary signals to their
+            desired locations.
+
+            Parameters
+            ----------
+            value : str,
+                The name of the location that the parent device should
+                be moved to.
+            kwargs : dict
+                The kwargs to be passed through to the super().set()
+                method.
+
+            Returns
+            -------
+            output_status : Status
+                The combined status object for all of the required sets.
+            """
+            try:
+                location_data = self.parent._locations_data[value]
+            except KeyError as exc:  # raise KeyError with a more helpful traceback message
+                traceback_str = (f'A call to {self.name}.set() expected input, {value}, '
+                                 f'to be in {list(self.parent._locations_data.keys())}')
+                raise KeyError(traceback_str) from exc
+
+            # Move all the required 'axes' to their locations in parallel.
+            status_list = [super().set(value, **kwargs)]
+            for signal, data in location_data.items():
+                status_list.append(status_list[-1] & getattr(self.parent, signal).set(data[0]))
+
+            status_list[0].set_finished()  # The super().set() status never completes????
+            output_status = status_list[-1]
+
+            return output_status
+
+        def available(self):
+            """
+            A method that returns the list of available locations for set and get.
+
+            Returns
+            -------
+            self.parent._locations_data.keys() : list
+                The list of 'locations' that this device has defined.
+            """
+
+            return list(self.parent._locations_data.keys())
 
     def __init__(self, *args, locations_data=None, **kwargs):
         """
@@ -222,9 +327,9 @@ class Diagnostic(DeviceWithLocations):
     camera = Component(Prosilica, 'Camera:', name='camera', kind='normal')
 
     def trigger(self):
-        '''
+        """
         A trigger functions that also triggers the currents quad_em and camera
-        '''
+        """
 
         # This appears to resolve a connection time-out error but I have no idea why.
         counter_value = self.camera.cam.array_counter.read()
@@ -289,9 +394,9 @@ class BaffleSlit(DeviceWithLocations):
     currents = Component(ID29EM, 'Currents:', name='currents', kind='normal')
 
     def trigger(self):
-        '''
+        """
         A trigger functions that includes a call to trigger the currents quad_em
-        '''
+        """
 
         currents_status = self.currents.trigger()
         super_status = super().trigger()
