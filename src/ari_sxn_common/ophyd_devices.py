@@ -25,8 +25,8 @@ class ID29EM(NSLS_EM):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Set the correct value for acquire mode when staging.
-        self.stage_sigs.update([(self.acquire_mode, 'Single')])
+        # Remove acquire check from staging as this causes a problem with 'self.unstage()'.
+        self.stage_sigs.pop('acquire')
         # Generate a list of signals and sub-devices for this qem
         signals_list = [(signal.dotted_name, signal.item)
                         for signal in self.walk_signals()
@@ -41,26 +41,6 @@ class ID29EM(NSLS_EM):
                 device.kind = 'config'  # Set signal to 'config' for proper readback
             elif hasattr(device, 'kind'):
                 device.kind = 'omitted'  # set signal to 'omitted' for proper readback
-
-    def trigger(self):
-        """
-        Trigger one acquisition. This function is here to resolve an issue
-        whereby the built-in quadEM._status object defined by
-        quadEM.self._status_type(quadEM) never completes. will need to circle
-        back to why that doesn't work at a later date.
-        """
-        from ophyd.device import Staged
-        import time as ttime
-        if self._staged != Staged.yes:
-            raise RuntimeError(
-                "This detector is not ready to trigger."
-                "Call the stage() method before triggering."
-            )
-
-        # self._status = self._status_type(self)
-        self._status = self._acquisition_signal.set(1)
-        self.generate_datum(self._image_name, ttime.time(), {})
-        return self._status
 
 
 class Prosilica(SingleTrigger, ProsilicaDetector):
@@ -262,6 +242,31 @@ class DeviceWithLocations(Device):
             locations_data = {}
         self._locations_data = locations_data
 
+    @property  # An attribute that returns what locations are available.
+    def available_locations(self):
+        return list(self._locations_data.keys())
+
+    def set_location(self, location):
+        """
+        A method that will move the device to 'location' if location is
+        in self.available_locations.
+        """
+        try:
+            location_data = self._locations_data[location]
+        except KeyError as exc:  # raise KeyError with a more helpful traceback message
+            traceback_str = (f'A call to {self.name}.set_location expected '
+                             f'input, {location}, to be in '
+                             f'{list(self._locations_data.keys())}')
+            raise KeyError(traceback_str) from exc
+
+        # Move all the required 'axes' to their locations in parallel.
+        status_list = []
+        for motor, data in location_data.items():
+            status_list.append(getattr(self, motor).set(data[0]))
+        # Note I am not sure why but wait(*status_list) doesn't work.
+        for status in status_list:  # Wait for each move to finish
+            wait(status)
+
     locations = Component(LocationSignal, value=[], name='locations',
                           kind='config')
 
@@ -329,6 +334,22 @@ class Diagnostic(DeviceWithLocations):
 
     camera = Component(Prosilica, 'Camera:', name='camera', kind='normal')
 
+    def trigger(self):
+        """
+        A trigger functions that includes a call to trigger the currents quad_em
+        """
+
+        # This appears to resolve a connection time-out error but I have no idea why.
+        _ = self.camera.cam.array_counter.read()
+        # trigger the child components that need it
+        currents_status = self.currents.trigger()
+        camera_status = self.camera.trigger()
+        super_status = super().trigger()
+
+        output_status = currents_status & camera_status & super_status
+
+        return output_status
+
 
 class BaffleSlit(DeviceWithLocations):
     """
@@ -368,6 +389,7 @@ class BaffleSlit(DeviceWithLocations):
     def __init__(self, *args, name, locations_data=None, **kwargs):
         super().__init__(*args, name=name, locations_data=locations_data,
                          **kwargs)
+
         # names to give the ```currents.current*.mean_value``` in self.read*() dicts.
         current_signals = {'current1': 'top', 'current2': 'bottom',
                            'current3': 'inboard', 'current4': 'outboard'}
@@ -379,8 +401,9 @@ class BaffleSlit(DeviceWithLocations):
         for current_name in current_names:
             current = getattr(currents, current_name)
             if current_name in current_signals.keys():
-                current.mean_value.name = f'currents_{current_signals[current_name]}'  # Adjust the name
-                setattr(self.currents, current_signals[current_name], current)  # Create a sym-link
+                current.mean_value.name = (f'{self.name}_currents_'
+                                           f'{current_signals[current_name]}')  # Adjust the name
+                setattr(currents, current_signals[current_name], current)  # Create a sym-link
             else:
                 current.mean_value.kind = 'omitted'  # Omit from reading any currents not used.
 
@@ -391,3 +414,14 @@ class BaffleSlit(DeviceWithLocations):
     outboard = Component(EpicsMotor, 'Outboard', name='outboard', kind='config')
     # The current read-back of the 4 blades.
     currents = Component(ID29EM, 'Currents:', name='currents', kind='hinted')
+
+    def trigger(self):
+        """
+        A trigger functions that includes a call to trigger the currents quad_em
+        """
+
+        currents_status = self.currents.trigger()
+        super_status = super().trigger()
+
+        output_status = currents_status & super_status
+        return output_status
