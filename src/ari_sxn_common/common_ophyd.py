@@ -332,7 +332,7 @@ class Diagnostic(DeviceWithLocations):
         """
 
         # This appears to resolve a connection time-out error but I have no idea why.
-        counter_value = self.camera.cam.array_counter.read()
+        _ = self.camera.cam.array_counter.read()
         # trigger the child components that need it
         currents_status = self.currents.trigger()
         camera_status = self.camera.trigger()
