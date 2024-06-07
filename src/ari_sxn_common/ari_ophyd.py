@@ -37,7 +37,23 @@ class M1(Device):
     ip = Component(EpicsSignalRO, "ip", name='ip', kind='config')
 
     # baffle slit sub-device
-    slits = Component(BaffleSlit, "baffle:", name='slits', kind='normal')
+    slits = Component(BaffleSlit, "baffle:", name='slits', kind='normal',
+                      locations_data={'in': {'top': (-12.7, 0.1),
+                                             'bottom': (12.7, 0.1),
+                                             'inboard': (12.7, 0.1),
+                                             'outboard': (-12.7, 0.1)},
+                                      'centre': {'top': (0, 0.1),
+                                                 'bottom': (0, 0.1),
+                                                 'inboard': (0, 0.1),
+                                                 'outboard': (0, 0.1)},
+                                      'nominal': {'top': (12.7, 0.1),
+                                                  'bottom': (-12.7, 0.1),
+                                                  'inboard': (-12.7, 0.1),
+                                                  'outboard': (12.7, 0.1)},
+                                      'out': {'top': (28, 0.1),
+                                              'bottom': (-28, 0.1),
+                                              'inboard': (-28, 0.1),
+                                              'outboard': (28, 0.1)}})
 
     # diagnostic sub-device
     diag = Component(Diagnostic, "diag:", name='diag', kind='normal',
