@@ -51,7 +51,7 @@ class M1(Device):
         _ = self.diag.camera.cam.array_counter.read()
 
         # trigger the child components that need it
-        baffle_status = self.baffle.trigger()
+        baffle_status = self.slits.trigger()
         diag_status = self.diag.trigger()
         super_status = super().trigger()
 
