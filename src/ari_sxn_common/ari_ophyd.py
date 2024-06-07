@@ -10,7 +10,7 @@ class M1(Device):
     The ARI M1 mirror section consists of the M1 mirror chamber, the beam
     -pipe, the associated Diagnostic and BaffleSlit sub-devices and the
     motors, detectors and vacuum signals for these. It is designed to
-    provide an intuitive, tab-to-complete based, interface to find all of
+    provide an intuitive, tab-to-complete based, interface to find all
     the components associated with the M1 mirror.
     """
     def __init__(self, *args, **kwargs):
@@ -47,8 +47,8 @@ class M1(Device):
         A trigger function that adds triggering of the baffleslit and diagnostic
         """
 
-        # This appears to resolve a connection time-out error but I have no idea why.
-        counter_value = self.diag.camera.cam.array_counter.read()
+        # This appears to resolve a connection time-out error, but I have no idea why.
+        _ = self.diag.camera.cam.array_counter.read()
 
         # trigger the child components that need it
         baffle_status = self.baffle.trigger()
