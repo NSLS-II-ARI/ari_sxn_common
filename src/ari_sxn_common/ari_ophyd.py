@@ -40,7 +40,14 @@ class M1(Device):
     slits = Component(BaffleSlit, "baffle:", name='slits', kind='normal')
 
     # diagnostic sub-device
-    diag = Component(Diagnostic, "diag:", name='diag', kind='normal')
+    diag = Component(Diagnostic, "diag:", name='diag', kind='normal',
+                     locations_data={'Out': {'blade': (0, 1)},
+                                     'YaG': {'blade': (31.75, 1),
+                                             'filter': (0, 1)},
+                                     'ML250': {'blade': (63.5, 1),
+                                               'filter': (-25, 1)},
+                                     'ML700': {'blade': (95.25, 1),
+                                               'filter': (-25, 1)}})
 
     def trigger(self):
         """
