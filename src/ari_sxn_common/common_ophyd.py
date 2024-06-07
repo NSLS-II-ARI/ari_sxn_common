@@ -126,7 +126,7 @@ class DeviceWithLocations(Device):
             Note, the put at the end is done during the 'get' instead of during the 'set' as
             each of the motors/signals could be independently moved without passing through
             the 'set' function. This does result in the case where using 'locations.value'
-            does not guarantee an up to date value so take care.
+            does not guarantee an up-to-date value so take care.
 
             Parameters
             ----------
@@ -202,7 +202,7 @@ class DeviceWithLocations(Device):
             Returns
             -------
             output_status : Status
-                The combined status object for all of the required sets.
+                The combined status object for all the required sets.
             """
             try:
                 location_data = self.parent._locations_data[value]
@@ -245,31 +245,6 @@ class DeviceWithLocations(Device):
             locations_data = {}
         self._locations_data = locations_data
 
-    @property  # An attribute that returns what locations are available.
-    def available_locations(self):
-        return list(self._locations_data.keys())
-
-    def set_location(self, location):
-        """
-        A method that will move the device to 'location' if location is
-        in self.available_locations.
-        """
-        try:
-            location_data = self._locations_data[location]
-        except KeyError as exc:  # raise KeyError with a more helpful traceback message
-            traceback_str = (f'A call to {self.name}.set_location expected '
-                             f'input, {location}, to be in '
-                             f'{list(self._locations_data.keys())}')
-            raise KeyError(traceback_str) from exc
-
-        # Move all the required 'axes' to their locations in parallel.
-        status_list = []
-        for motor, data in location_data.items():
-            status_list.append(getattr(self, motor).set(data[0]))
-        # Note I am not sure why but wait(*status_list) doesn't work.
-        for status in status_list:  # Wait for each move to finish
-            wait(status)
-
     locations = Component(LocationSignal, value=[], name='locations',
                           kind='config')
 
@@ -284,11 +259,10 @@ class Diagnostic(DeviceWithLocations):
     a multilayer mirror, ...) as well as an additional movable filter (e.g.
     with an Al coated YaG screen for use with the multilayer mirror). They
     also have a camera, for viewing the image on the filter or blade YaG
-    screens, and an electrometer for measuring the current on the photo-diode.
-    The diagnostic also has a 'set_location' method that allows the user to quickly
-    move to the locations defined by the 'locations' argument. The 'locations'
-    attribute is a read-only ophyd signal that returns a list of 'locations' that
-    the device is currently 'in'.
+    screens. It also has a 'locations' attribute that is an ophyd signal that
+    returns a list of 'locations' that the device is currently 'in' when read
+    and can be 'set' to any one of the locations predefined in the kwarg
+    locations_data.
 
     Parameters
     ----------
@@ -302,6 +276,55 @@ class Diagnostic(DeviceWithLocations):
         super().__init__(*args, **kwargs)
         # Update the 'name' of the self.camera.cam.array_data to something more useful
         getattr(self, 'camera.cam.array_data').name = f'{self.name}_camera'
+
+    blade = Component(EpicsMotor, 'multi_trans', name='blade',
+                      kind='normal')
+    filter = Component(EpicsMotor, 'yag_trans', name='filter',
+                       kind='normal')
+
+    camera = Component(Prosilica, 'Camera:', name='camera', kind='normal')
+
+    def trigger(self):
+        """
+        A trigger functions that also triggers the currents quad_em and camera
+        """
+
+        # This appears to resolve a connection time-out error, but I have no idea why.
+        _ = self.camera.cam.array_counter.read()
+        # trigger the child components that need it
+        camera_status = self.camera.trigger()
+        super_status = super().trigger()
+
+        output_status = camera_status & super_status
+
+        return output_status
+
+
+class DiagnosticWithPhotodiode(Diagnostic):
+    """
+    A Diagnostic ophyd Device used for ARI & SXN non-cooled diagnostic units.
+
+    The ARI & SXN diagnostic units consist of a movable blade that
+    holds a number of diagnostic elements (e.g. a YaG screen, a photo-diode,
+    a multilayer mirror, ...) as well as an additional movable filter (e.g.
+    with an Al coated YaG screen for use with the multilayer mirror). They
+    also have a camera, for viewing the image on the filter or blade YaG
+    screens, and an electrometer for measuring the current on the photodiode.
+    It also has a 'locations' attribute that is an ophyd signal that
+    returns a list of 'locations' that the device is currently 'in' when read
+    and can be 'set' to any one of the locations predefined in the kwarg
+    locations_data.
+
+    Parameters
+    ----------
+    *args : arguments
+        The arguments passed to the parent 'DeviceWithLocations' class
+    **kwargs : keyword arguments
+        The keyword arguments passed to the parent 'Device' class
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         # names to give the ```currents.current*.mean_value``` in self.read*() dicts.
         current_signals = {'current2': 'photodiode'}
         # the list of ```currents.current*``` attributes
@@ -313,32 +336,21 @@ class Diagnostic(DeviceWithLocations):
             current = getattr(currents, current_name)
             if current_name in current_signals.keys():
                 current.mean_value.name = f'{self.name}_{current_signals[current_name]}'  # Adjust the name
-                setattr(self, current_signals[current_name], current)  # Create a sym-link
+                setattr(self, current_signals[current_name], current)  # Create a symlink
             else:
                 current.mean_value.kind = 'omitted'  # Omit from reading any currents not used.
 
-    blade = Component(EpicsMotor, 'multi_trans', name='blade',
-                      kind='normal')
-    filter = Component(EpicsMotor, 'yag_trans', name='filter',
-                       kind='normal')
-
     currents = Component(ID29EM, 'Currents:', name='currents', kind='normal')
-
-    camera = Component(Prosilica, 'Camera:', name='camera', kind='normal')
 
     def trigger(self):
         """
         A trigger functions that also triggers the currents quad_em and camera
         """
-
-        # This appears to resolve a connection time-out error but I have no idea why.
-        _ = self.camera.cam.array_counter.read()
         # trigger the child components that need it
         currents_status = self.currents.trigger()
-        camera_status = self.camera.trigger()
         super_status = super().trigger()
 
-        output_status = currents_status & camera_status & super_status
+        output_status = currents_status & super_status
 
         return output_status
 
@@ -381,7 +393,7 @@ class BaffleSlit(DeviceWithLocations):
             if current_name in current_signals.keys():
                 current.mean_value.name = (f'{self.name}_currents_'
                                            f'{current_signals[current_name]}')  # Adjust the name
-                setattr(currents, current_signals[current_name], current)  # Create a sym-link
+                setattr(currents, current_signals[current_name], current)  # Create a symlink
             else:
                 current.mean_value.kind = 'omitted'  # Omit from reading any currents not used.
 
