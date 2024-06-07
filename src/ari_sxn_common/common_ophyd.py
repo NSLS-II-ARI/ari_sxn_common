@@ -32,7 +32,7 @@ class ID29EM(NSLS_EM):
                         for signal in self.walk_signals()
                         if '.' not in signal.dotted_name]
         devices_list = [(name, device) for (name, device) in self.walk_subdevices()]
-        for (name, device) in signals_list+devices_list:  # step through all attributes
+        for (name, device) in signals_list + devices_list:  # step through all attributes
             if name in ['current1', 'current2', 'current3', 'current4']:
                 device.kind = 'hinted'  # Hint this signal for proper readback
                 device.nd_array_port.put('EM180')  # Set the correct port for this value.
@@ -48,6 +48,7 @@ class Prosilica(SingleTrigger, ProsilicaDetector):
     This is a class which adds the cam1.array_data attribute required when not
     image saving.
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.cam.kind = 'normal'
@@ -259,23 +260,44 @@ class Diagnostic(DeviceWithLocations):
     a multilayer mirror, ...) as well as an additional movable filter (e.g.
     with an Al coated YaG screen for use with the multilayer mirror). They
     also have a camera, for viewing the image on the filter or blade YaG
-    screens. It also has a 'locations' attribute that is an ophyd signal that
-    returns a list of 'locations' that the device is currently 'in' when read
-    and can be 'set' to any one of the locations predefined in the kwarg
-    locations_data.
+    screens. Optionally, via the `photodiode` kwarg, a photodiode can also
+    be included. It also has a 'locations' attribute that is an ophyd signal
+    that returns a list of 'locations' that the device is currently 'in'
+    when read and can be 'set' to any one of the locations predefined in
+    the kwarg locations_data.
 
     Parameters
     ----------
     *args : arguments
         The arguments passed to the parent 'DeviceWithLocations' class
+    photodiode : bool
+        A boolean indicating if the diagnostic contains a photodiode or not
     **kwargs : keyword arguments
         The keyword arguments passed to the parent 'Device' class
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, photodiode=False, **kwargs):
         super().__init__(*args, **kwargs)
-        # Update the 'name' of the self.camera.cam.array_data to something more useful
+        # Update the 'name' of the self.camera.cam.array_data
         getattr(self, 'camera.cam.array_data').name = f'{self.name}_camera'
+
+        if photodiode:
+            current_signals = {'current2': 'photodiode'}
+        else:
+            current_signals = {}
+        # the list of ```currents.current*``` attributes
+        current_names = ['current1', 'current2', 'current3', 'current4']
+        currents = getattr(self, 'currents')  # ```self.currents``` attr.
+
+        # for each of the current*.mean_value attrs (* = 1,2,3, or 4)
+        for current_name in current_names:
+            current = getattr(currents, current_name)
+            if current_name in current_signals.keys():
+                current.mean_value.name = (f'{self.name}_'
+                                           f'{current_signals[current_name]}')
+                setattr(self, current_signals[current_name], current)
+            else:
+                current.mean_value.kind = 'omitted'  # Omit unused currents
 
     blade = Component(EpicsMotor, 'multi_trans', name='blade',
                       kind='normal')
@@ -283,6 +305,9 @@ class Diagnostic(DeviceWithLocations):
                        kind='normal')
 
     camera = Component(Prosilica, 'Camera:', name='camera', kind='normal')
+
+    # This is added to allow for the mirror current even if no photodiode exists
+    currents = Component(ID29EM, 'Currents:', name='currents', kind='normal')
 
     def trigger(self):
         """
@@ -293,64 +318,10 @@ class Diagnostic(DeviceWithLocations):
         _ = self.camera.cam.array_counter.read()
         # trigger the child components that need it
         camera_status = self.camera.trigger()
-        super_status = super().trigger()
-
-        output_status = camera_status & super_status
-
-        return output_status
-
-
-class DiagnosticWithPhotodiode(Diagnostic):
-    """
-    A Diagnostic ophyd Device used for ARI & SXN non-cooled diagnostic units.
-
-    The ARI & SXN diagnostic units consist of a movable blade that
-    holds a number of diagnostic elements (e.g. a YaG screen, a photo-diode,
-    a multilayer mirror, ...) as well as an additional movable filter (e.g.
-    with an Al coated YaG screen for use with the multilayer mirror). They
-    also have a camera, for viewing the image on the filter or blade YaG
-    screens, and an electrometer for measuring the current on the photodiode.
-    It also has a 'locations' attribute that is an ophyd signal that
-    returns a list of 'locations' that the device is currently 'in' when read
-    and can be 'set' to any one of the locations predefined in the kwarg
-    locations_data.
-
-    Parameters
-    ----------
-    *args : arguments
-        The arguments passed to the parent 'DeviceWithLocations' class
-    **kwargs : keyword arguments
-        The keyword arguments passed to the parent 'Device' class
-    """
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # names to give the ```currents.current*.mean_value``` in self.read*() dicts.
-        current_signals = {'current2': 'photodiode'}
-        # the list of ```currents.current*``` attributes
-        current_names = ['current1', 'current2', 'current3', 'current4']
-        currents = getattr(self, 'currents')  # ```self.currents``` attr.
-
-        # for each of the current*.mean_value attrs (* = 1,2,3, or 4)
-        for current_name in current_names:
-            current = getattr(currents, current_name)
-            if current_name in current_signals.keys():
-                current.mean_value.name = f'{self.name}_{current_signals[current_name]}'  # Adjust the name
-                setattr(self, current_signals[current_name], current)  # Create a symlink
-            else:
-                current.mean_value.kind = 'omitted'  # Omit from reading any currents not used.
-
-    currents = Component(ID29EM, 'Currents:', name='currents', kind='normal')
-
-    def trigger(self):
-        """
-        A trigger functions that also triggers the currents quad_em and camera
-        """
-        # trigger the child components that need it
         currents_status = self.currents.trigger()
         super_status = super().trigger()
 
-        output_status = currents_status & super_status
+        output_status = camera_status & currents_status & super_status
 
         return output_status
 
