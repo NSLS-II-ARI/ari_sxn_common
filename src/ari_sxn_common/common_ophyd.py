@@ -183,7 +183,7 @@ class DeviceWithLocations(PrettyStr, Device):
 
                     if isinstance(value, float):  # for float values
                         value_check.append(data[0] - data[1] < value < data[0] + data[1])
-                    elif isinstance(getattr(self.parent, signal_name)):
+                    elif isinstance(getattr(self.parent, signal_name), type(self)):
                         # This implies the signal is a child DeviceWithLocation LocationSignal
                         value_check.append(data[0] in value)  # takes care of child
                     elif isinstance(value, (int, str)):  # for string or int values
