@@ -1,9 +1,9 @@
-from common_ophyd import BaffleSlit, Diagnostic
+from common_ophyd import BaffleSlit, Diagnostic, PrettyStr
 from ophyd import (Component, Device, EpicsMotor)
 from ophyd.signal import EpicsSignalRO
 
 
-class M1(Device):
+class M1(PrettyStr, Device):
     """
     The ophyd `Device` that is used to talk to the ARI M1 mirror section.
 
@@ -32,12 +32,16 @@ class M1(Device):
     y = Component(EpicsMotor, 'y', name='y', kind='normal')
 
     # Mirror chamber vacuum axes
-    ccg = Component(EpicsSignalRO, "ccg", name='ccg', kind='config')
-    tcg = Component(EpicsSignalRO, "tcg", name='tcg', kind='config')
-    ip = Component(EpicsSignalRO, "ip", name='ip', kind='config')
+    ccg = Component(EpicsSignalRO, "ccg", name='ccg', kind='config',
+                    labels=('vacuum',))
+    tcg = Component(EpicsSignalRO, "tcg", name='tcg', kind='config',
+                    labels=('vacuum',))
+    ip = Component(EpicsSignalRO, "ip", name='ip', kind='config',
+                   labels=('vacuum',))
 
     # baffle slit sub-device
     slits = Component(BaffleSlit, "baffle:", name='slits', kind='normal',
+                      labels=('device',),
                       locations_data={'in': {'top': (-12.7, 0.1),
                                              'bottom': (12.7, 0.1),
                                              'inboard': (12.7, 0.1),
@@ -57,6 +61,7 @@ class M1(Device):
 
     # diagnostic sub-device
     diag = Component(Diagnostic, "diag:", name='diag', kind='normal',
+                     labels=('device',),
                      locations_data={'Out': {'blade': (0, 1)},
                                      'YaG': {'blade': (-31.75, 1),
                                              'filter': (0, 1)},
@@ -81,3 +86,15 @@ class M1(Device):
         output_status = baffle_status & diag_status & super_status
 
         return output_status
+
+    def test_structure(self):
+        """
+        Test method add later
+        """
+
+        output = {i: (getattr(self, i).test_structure
+                      if hasattr(getattr(self, i), 'test_structure')
+                      else None)
+                  for i in self._signals.keys()}
+
+        return output

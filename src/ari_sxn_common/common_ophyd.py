@@ -7,7 +7,26 @@ from ophyd.quadem import NSLS_EM, QuadEMPort
 from ophyd.signal import Signal, EpicsSignalRO
 
 
-class ID29EM(NSLS_EM):
+class PrettyStr():
+
+    def __str__(self):
+        exclude = [EpicsMotor, Prosilica, ID29EM, EpicsSignalRO]
+        if hasattr(self, '_signals'):
+            signals = [getattr(self, i).__str__().replace(f'{self.name}_', '')
+                       if type(getattr(self, i)) not in exclude
+                       else getattr(self, i).name.replace(f'{self.name}_', '')
+                       for i in self._signals.keys()]
+        else:
+            signals = []
+
+        output = f'{self.name}'
+        for label in signals:
+            output += f'\n    {label.replace('\n', '\n    ')}'
+
+        return output
+
+
+class ID29EM(PrettyStr, NSLS_EM):
     """
     A 29-ID specific version of the NSLS_EM quadEM device.
 
@@ -63,7 +82,7 @@ class Prosilica(SingleTrigger, ProsilicaDetector):
     cam = Component(ProsilicaCam, "cam1:", kind='normal')
 
 
-class DeviceWithLocations(Device):
+class DeviceWithLocations(PrettyStr, Device):
     # noinspection GrazieInspection
     """
         A child of ophyd.Device that adds a 'location' functionality.
@@ -101,7 +120,7 @@ class DeviceWithLocations(Device):
             The keyword arguments passed to the parent 'Device' class
         """
 
-    class LocationSignal(Signal):
+    class LocationSignal(PrettyStr, Signal):
         """
         An InternalSignal class to be used for updating the 'location' signal
 
