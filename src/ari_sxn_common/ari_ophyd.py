@@ -78,12 +78,16 @@ class M1(PrettyStr, Device):
         # This appears to resolve a connection time-out error, but I have no idea why.
         _ = self.diag.camera.cam.array_counter.read()
 
+        super_status = super().trigger()
+
         # trigger the child components that need it
         baffle_status = self.slits.trigger()
         diag_status = self.diag.trigger()
-        super_status = super().trigger()
 
-        output_status = baffle_status & diag_status & super_status
+
+        # Not sure why but status = status & status & status fails to complete
+        child_status = baffle_status & diag_status
+        output_status = child_status & super_status
 
         return output_status
 
