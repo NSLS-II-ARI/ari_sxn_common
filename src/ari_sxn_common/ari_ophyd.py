@@ -24,20 +24,21 @@ class M1(DeviceWithLocations):
 
     # Mirror motor axes
     Ry_coarse = Component(EpicsMotor, 'Ry_coarse', name='Ry_coarse',
-                          kind='normal')
+                          kind='normal', labels=('motor',))
     Ry_fine = Component(EpicsMotor, 'Ry_fine', name='Ry_fine',
-                        kind='normal')
-    Rz = Component(EpicsMotor, 'Rz', name='Rz', kind='normal')
-    x = Component(EpicsMotor, 'x', name='x', kind='normal')
-    y = Component(EpicsMotor, 'y', name='y', kind='normal')
+                        kind='normal', labels=('motor',))
+    Rz = Component(EpicsMotor, 'Rz', name='Rz', kind='normal',
+                   labels=('motor',))
+    x = Component(EpicsMotor, 'x', name='x', kind='normal', labels=('motor',))
+    y = Component(EpicsMotor, 'y', name='y', kind='normal', labels=('motor',))
 
     # Mirror chamber vacuum axes
     ccg = Component(EpicsSignalRO, "ccg", name='ccg', kind='config',
-                    labels=('vacuum',))
+                    labels=('detector',))
     tcg = Component(EpicsSignalRO, "tcg", name='tcg', kind='config',
-                    labels=('vacuum',))
+                    labels=('detector',))
     ip = Component(EpicsSignalRO, "ip", name='ip', kind='config',
-                   labels=('vacuum',))
+                   labels=('detector',))
 
     # baffle slit sub-device
     slits = Component(BaffleSlit, "baffle:", name='slits', kind='normal',
