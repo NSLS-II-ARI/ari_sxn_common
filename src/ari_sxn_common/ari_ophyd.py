@@ -19,7 +19,8 @@ class M1(DeviceWithLocations):
         A new __init__ method that links photocurrent to the self.diag quadem
         """
         super().__init__(*args, **kwargs)
-        self.diag.currents.current1.mean_value.name = f'{self.name}_photocurrent'
+        self.diag.currents.current1.mean_value.name = (f'{self.name}'
+                                                       f'_photocurrent')
         self.diag.currents.current1.mean_value.kind = 'normal'
         setattr(self, 'photocurrent', self.diag.currents.current1.mean_value)
 
@@ -30,8 +31,10 @@ class M1(DeviceWithLocations):
                         kind='normal', labels=('motor',))
     Rz = Component(EpicsMotor, 'Rz', name='Rz', kind='normal',
                    labels=('motor',))
-    x = Component(EpicsMotor, 'x', name='x', kind='normal', labels=('motor',))
-    y = Component(EpicsMotor, 'y', name='y', kind='normal', labels=('motor',))
+    x = Component(EpicsMotor, 'x', name='x', kind='normal',
+                  labels=('motor',))
+    y = Component(EpicsMotor, 'y', name='y', kind='normal',
+                  labels=('motor',))
 
     # Mirror chamber vacuum axes
     ccg = Component(EpicsSignalRO, "ccg", name='ccg', kind='config',
@@ -77,7 +80,7 @@ class M1(DeviceWithLocations):
         A trigger function that adds triggering of the baffleslit and diagnostic
         """
 
-        # This appears to resolve a connection time-out error, but I have no idea why.
+        # This resolves a connection time-out error, but I have no idea why.
         _ = self.diag.camera.cam.array_counter.read()
 
         super_status = super().trigger()
