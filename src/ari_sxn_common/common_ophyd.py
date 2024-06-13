@@ -1,11 +1,22 @@
 from collections import defaultdict
-from ophyd import (Component, Device, EpicsMotor)
+from ophyd import (Component, Device, EpicsMotor as EM)
 from ophyd.areadetector.base import ADComponent
 from ophyd.areadetector.cam import ProsilicaDetectorCam
 from ophyd.areadetector.detectors import ProsilicaDetector
 from ophyd.areadetector.trigger_mixins import SingleTrigger
 from ophyd.quadem import NSLS_EM, QuadEMPort
 from ophyd.signal import Signal, EpicsSignalRO
+
+class EpicsMotor(EM):
+    """
+    updates ophyd.EpicsMotor so that print(EpicsMotor) returns its name
+    """
+    def __str__(self):
+        """
+        Updating the __str__ function to return the device name
+        """
+
+        return self.name
 
 
 class PrettyStr():
@@ -35,7 +46,7 @@ class PrettyStr():
         return output
 
 
-class ID29EM(PrettyStr, NSLS_EM):
+class ID29EM(NSLS_EM):
     """
     A 29-ID specific version of the NSLS_EM quadEM device.
 
@@ -69,6 +80,13 @@ class ID29EM(PrettyStr, NSLS_EM):
                 device.kind = 'config'  # Set signal to 'config' for proper readback
             elif hasattr(device, 'kind'):
                 device.kind = 'omitted'  # set signal to 'omitted' for proper readback
+
+    def __str__(self):
+        """
+        Updating the __str__ function to return the device name
+        """
+
+        return self.name
 
 
 class Prosilica(SingleTrigger, ProsilicaDetector):
