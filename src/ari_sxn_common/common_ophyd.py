@@ -7,11 +7,14 @@ from ophyd.areadetector.trigger_mixins import SingleTrigger
 from ophyd.quadem import NSLS_EM, QuadEMPort
 from ophyd.signal import Signal, EpicsSignalRO
 
+from pprint import pprint
+
 
 class PrettyStr():
 
     def __str__(self):
-        exclude = [EpicsMotor, Prosilica, ID29EM, EpicsSignalRO]
+        exclude = [EpicsMotor, Prosilica, ID29EM, EpicsSignalRO,
+                   DeviceWithLocations.LocationSignal]
         signals = defaultdict(list)
         if hasattr(self, '_signals'):
             for signal in self._signals.keys():
@@ -25,11 +28,12 @@ class PrettyStr():
                     if type(getattr(self, signal)) not in exclude
                     else getattr(self, signal).name.replace(f'{self.name}_', ''))
 
-        output = f'{self.name}'
+        output = f'\n{self.name}'
         for label, names in signals.items():
-            output += f'\n    {label.upper()}S:'
+            output += f'\n  *{label}s*\n'
             for name in names:
-                output += f'\n    {name.replace('\n', '\n    ')}'
+                output += f'    {name.replace('\n', '\n  ')}'
+            output += f'\n'
 
         return output
 
@@ -277,7 +281,7 @@ class DeviceWithLocations(PrettyStr, Device):
         self._locations_data = locations_data
 
     locations = Component(LocationSignal, value=[], name='locations',
-                          kind='config')
+                          kind='config', labels=('position',))
 
 
 # noinspection PyUnresolvedReferences
@@ -330,14 +334,16 @@ class Diagnostic(DeviceWithLocations):
                 current.mean_value.kind = 'omitted'  # Omit unused currents
 
     blade = Component(EpicsMotor, 'multi_trans', name='blade',
-                      kind='normal')
+                      kind='normal', labels=('motor',))
     filter = Component(EpicsMotor, 'yag_trans', name='filter',
-                       kind='normal')
+                       kind='normal', labels=('motor',))
 
-    camera = Component(Prosilica, 'Camera:', name='camera', kind='normal')
+    camera = Component(Prosilica, 'Camera:', name='camera', kind='normal',
+                       labels=('detector',))
 
     # This is added to allow for the mirror current even if no photodiode exists
-    currents = Component(ID29EM, 'Currents:', name='currents', kind='normal')
+    currents = Component(ID29EM, 'Currents:', name='currents', kind='normal',
+                         labels=('detector',))
 
     def trigger(self):
         """
@@ -393,18 +399,23 @@ class BaffleSlit(DeviceWithLocations):
             current = getattr(currents, current_name)
             if current_name in current_signals.keys():
                 current.mean_value.name = (f'{self.name}_currents_'
-                                           f'{current_signals[current_name]}')  # Adjust the name
-                setattr(currents, current_signals[current_name], current)  # Create a symlink
+                                           f'{current_signals[current_name]}')
+                setattr(currents, current_signals[current_name], current)
             else:
-                current.mean_value.kind = 'omitted'  # Omit from reading any currents not used.
+                current.mean_value.kind = 'omitted'
 
     # The 4 blade motor components
-    top = Component(EpicsMotor, 'Top', name='top', kind='normal')
-    bottom = Component(EpicsMotor, 'Bottom', name='bottom', kind='normal')
-    inboard = Component(EpicsMotor, 'Inboard', name='inboard', kind='normal')
-    outboard = Component(EpicsMotor, 'Outboard', name='outboard', kind='normal')
+    top = Component(EpicsMotor, 'Top', name='top', kind='normal',
+                    labels=('motor',))
+    bottom = Component(EpicsMotor, 'Bottom', name='bottom', kind='normal',
+                       labels=('motor',))
+    inboard = Component(EpicsMotor, 'Inboard', name='inboard', kind='normal',
+                        labels=('motor',))
+    outboard = Component(EpicsMotor, 'Outboard', name='outboard',
+                         kind='normal', labels=('motor',))
     # The current read-back of the 4 blades.
-    currents = Component(ID29EM, 'Currents:', name='currents', kind='normal')
+    currents = Component(ID29EM, 'Currents:', name='currents', kind='normal',
+                         labels=('detector',))
 
     def trigger(self):
         """
