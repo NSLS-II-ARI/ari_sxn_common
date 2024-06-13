@@ -1,5 +1,6 @@
-from common_ophyd import (BaffleSlit, Diagnostic, DeviceWithLocations)
-from ophyd import (Component, EpicsMotor)
+from common_ophyd import (BaffleSlit, Diagnostic, DeviceWithLocations,
+                          EpicsMotor)
+from ophyd import Component
 from ophyd.signal import EpicsSignalRO
 
 
