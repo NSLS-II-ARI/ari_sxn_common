@@ -7,8 +7,6 @@ from ophyd.areadetector.trigger_mixins import SingleTrigger
 from ophyd.quadem import NSLS_EM, QuadEMPort
 from ophyd.signal import Signal, EpicsSignalRO
 
-from pprint import pprint
-
 
 class PrettyStr():
 
@@ -30,10 +28,9 @@ class PrettyStr():
 
         output = f'\n{self.name}'
         for label, names in signals.items():
-            output += f'\n  *{label}s*'
+            output += f'\n  "{label}s":'
             for name in names:
-                output += f'    {name.replace('\n', '\n  ')}'
-            #output += f'\n'
+                output += f'    {name.replace('\n', '\n    ')}'
 
         return output
 
