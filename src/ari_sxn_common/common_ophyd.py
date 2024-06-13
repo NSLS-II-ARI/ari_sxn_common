@@ -30,10 +30,10 @@ class PrettyStr():
 
         output = f'\n{self.name}'
         for label, names in signals.items():
-            output += f'\n  *{label}s*\n'
+            output += f'\n  *{label}s*'
             for name in names:
                 output += f'    {name.replace('\n', '\n  ')}'
-            output += f'\n'
+            #output += f'\n'
 
         return output
 
