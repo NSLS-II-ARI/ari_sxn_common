@@ -1,3 +1,4 @@
+from collections import defaultdict
 from ophyd import (Component, Device, EpicsMotor)
 from ophyd.areadetector.base import ADComponent
 from ophyd.areadetector.cam import ProsilicaDetectorCam
@@ -11,17 +12,24 @@ class PrettyStr():
 
     def __str__(self):
         exclude = [EpicsMotor, Prosilica, ID29EM, EpicsSignalRO]
+        signals = defaultdict(list)
         if hasattr(self, '_signals'):
-            signals = [getattr(self, i).__str__().replace(f'{self.name}_', '')
-                       if type(getattr(self, i)) not in exclude
-                       else getattr(self, i).name.replace(f'{self.name}_', '')
-                       for i in self._signals.keys()]
-        else:
-            signals = []
+            for signal in self._signals.keys():
+                try:
+                    label = list(getattr(self, signal)._ophyd_labels_)[0]
+                except IndexError:
+                    label = 'Unknown'
+
+                signals[label].append(
+                    getattr(self, signal).__str__().replace(f'{self.name}_', '')
+                    if type(getattr(self, signal)) not in exclude
+                    else getattr(self, signal).name.replace(f'{self.name}_', ''))
 
         output = f'{self.name}'
-        for label in signals:
-            output += f'\n    {label.replace('\n', '\n    ')}'
+        for label, names in signals.items():
+            output += f'\n    {label.upper()}S:'
+            for name in names:
+                output += f'\n    {name.replace('\n', '\n    ')}'
 
         return output
 
