@@ -1,9 +1,9 @@
-from common_ophyd import BaffleSlit, Diagnostic, PrettyStr
-from ophyd import (Component, Device, EpicsMotor)
+from common_ophyd import (BaffleSlit, Diagnostic, DeviceWithLocations)
+from ophyd import (Component, EpicsMotor)
 from ophyd.signal import EpicsSignalRO
 
 
-class M1(PrettyStr, Device):
+class M1(DeviceWithLocations):
     """
     The ophyd `Device` that is used to talk to the ARI M1 mirror section.
 
@@ -83,7 +83,6 @@ class M1(PrettyStr, Device):
         # trigger the child components that need it
         baffle_status = self.slits.trigger()
         diag_status = self.diag.trigger()
-
 
         # Not sure why but status = status & status & status fails to complete
         child_status = baffle_status & diag_status

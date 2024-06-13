@@ -165,13 +165,14 @@ class DeviceWithLocations(PrettyStr, Device):
             for location, location_data in self.parent._locations_data.items():
                 value_check = []
                 for signal_name, data in location_data.items():
-                    # note below tries signal.position and then signal.value to work with
-                    # 'positioners' and 'signals' that return floats, ints or strings
+                    # note below tries signal.position and then signal.get() to work with
+                    # 'positioners' and 'signals'.
                     signal = getattr(self.parent, signal_name)
+                    # required as EpicsMotor.get() returns a tuple not it's position
                     if hasattr(signal, 'position'):
                         value = getattr(signal, 'position')
-                    elif hasattr(signal, 'value'):
-                        value = getattr(signal, 'value')
+                    elif hasattr(signal, 'get'):
+                        value = getattr(signal, 'get')()
                     else:
                         raise AttributeError(f'during a call to {self.parent}.locations.get()'
                                              f'a signal ({signal_name}) from '
@@ -179,13 +180,13 @@ class DeviceWithLocations(PrettyStr, Device):
                                              f'not have a supported attribute. Presently '
                                              f'supported attributes are '
                                              f'{self.parent.name}{signal_name}.position and '
-                                             f'{self.parent.name}{signal_name}.value')
+                                             f'{self.parent.name}{signal_name}.get()')
 
                     if isinstance(value, float):  # for float values
                         value_check.append(data[0] - data[1] < value < data[0] + data[1])
                     elif isinstance(getattr(self.parent, signal_name), type(self)):
                         # This implies the signal is a child DeviceWithLocation LocationSignal
-                        value_check.append(data[0] in value)  # takes care of child
+                        value_check.append(data[0] in value)  # checks if it is in the list
                     elif isinstance(value, (int, str)):  # for string or int values
                         value_check.append(data[0] == value)
                     else:
@@ -193,7 +194,9 @@ class DeviceWithLocations(PrettyStr, Device):
                                          f'a value ({value}) from '
                                          f'{self.parent.name}._location_data was found to '
                                          f'be a non-supported data-type. Presently '
-                                         f'supported data-types are floats, ints and strings')
+                                         f'supported data-types are floats, ints and strings '
+                                         f'or lists from DeviceWithLocations LocationSignal '
+                                         f'signals')
                 if all(value_check):
                     locations.append(location)
 
