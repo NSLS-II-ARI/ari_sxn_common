@@ -21,7 +21,7 @@ class PrettyStr():
                 try:
                     label = list(getattr(self, signal)._ophyd_labels_)[0]
                 except IndexError:
-                    label = 'Unknown'
+                    label = 'unknown'
 
                 signals[label].append(
                     getattr(self, signal).__str__().replace(f'{self.name}_', '')
