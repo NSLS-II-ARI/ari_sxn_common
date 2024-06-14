@@ -481,8 +481,8 @@ class BaffleSlit(DeviceWithLocations):
     # The 4 blade motor components
     top = Component(ID29EpicsMotor, 'Top', name='top', kind='normal',
                     labels=('motor',))
-    bottom = Component(ID29EpicsMotor, 'Bottom', name='bottom', kind='normal',
-                       labels=('motor',))
+    bottom = Component(ID29EpicsMotor, 'Bottom', name='bottom',
+                       kind='normal', labels=('motor',))
     inboard = Component(ID29EpicsMotor, 'Inboard', name='inboard',
                         kind='normal', labels=('motor',))
     outboard = Component(ID29EpicsMotor, 'Outboard', name='outboard',

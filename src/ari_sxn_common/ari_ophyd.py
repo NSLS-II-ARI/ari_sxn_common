@@ -93,5 +93,3 @@ class M1(DeviceWithLocations):
         output_status = child_status & super_status
 
         return output_status
-
-
