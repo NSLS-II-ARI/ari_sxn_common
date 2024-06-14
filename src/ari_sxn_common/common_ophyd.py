@@ -179,7 +179,7 @@ class DeviceWithLocations(PrettyStr, Device):
             The keyword arguments passed to the parent 'Device' class
         """
 
-    class LocationSignal(PrettyStr, Signal):
+    class LocationSignal(Signal):
         """
         An InternalSignal class to be used for updating the 'location' signal
 
@@ -188,7 +188,8 @@ class DeviceWithLocations(PrettyStr, Device):
         parent `DeviceWithLocations` Device to. This signal returns a list of
         locations that the parent is currently in. It also has a
         `self.available()` method that returns a list of pre-set 'locations'
-        that it can be set too.
+        that it can be set too. It also has a self.__str__() method that returns
+        'name (label)'.
 
         NOTE: It is an inner class of DeviceWithLocations as it relies on the
         parent having attributes defined by DeviceWithLocations. It updates
@@ -196,6 +197,13 @@ class DeviceWithLocations(PrettyStr, Device):
         ```super().get()```, the self.set(...) method to move to the pre-set
         location and the self.available() method.
         """
+
+        def __str__(self):
+            """
+            Updating the __str__ function to return 'name (label)'
+            """
+
+            return f'{self.name} ({list(self._ophyd_labels_)[0]})'
 
         def get(self, **kwargs):
             """
