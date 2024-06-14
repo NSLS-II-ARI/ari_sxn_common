@@ -1,7 +1,6 @@
 from common_ophyd import (BaffleSlit, Diagnostic, DeviceWithLocations,
-                          EpicsMotor)
+                          ID29EpicsMotor, ID29EpicsSignalRO)
 from ophyd import Component
-from ophyd.signal import EpicsSignalRO
 
 
 class M1(DeviceWithLocations):
@@ -25,23 +24,23 @@ class M1(DeviceWithLocations):
         setattr(self, 'photocurrent', self.diag.currents.current1.mean_value)
 
     # Mirror motor axes
-    Ry_coarse = Component(EpicsMotor, 'Ry_coarse', name='Ry_coarse',
+    Ry_coarse = Component(ID29EpicsMotor, 'Ry_coarse', name='Ry_coarse',
                           kind='normal', labels=('motor',))
-    Ry_fine = Component(EpicsMotor, 'Ry_fine', name='Ry_fine',
+    Ry_fine = Component(ID29EpicsMotor, 'Ry_fine', name='Ry_fine',
                         kind='normal', labels=('motor',))
-    Rz = Component(EpicsMotor, 'Rz', name='Rz', kind='normal',
+    Rz = Component(ID29EpicsMotor, 'Rz', name='Rz', kind='normal',
                    labels=('motor',))
-    x = Component(EpicsMotor, 'x', name='x', kind='normal',
+    x = Component(ID29EpicsMotor, 'x', name='x', kind='normal',
                   labels=('motor',))
-    y = Component(EpicsMotor, 'y', name='y', kind='normal',
+    y = Component(ID29EpicsMotor, 'y', name='y', kind='normal',
                   labels=('motor',))
 
     # Mirror chamber vacuum axes
-    ccg = Component(EpicsSignalRO, "ccg", name='ccg', kind='config',
+    ccg = Component(ID29EpicsSignalRO, "ccg", name='ccg', kind='config',
                     labels=('detector',))
-    tcg = Component(EpicsSignalRO, "tcg", name='tcg', kind='config',
+    tcg = Component(ID29EpicsSignalRO, "tcg", name='tcg', kind='config',
                     labels=('detector',))
-    ip = Component(EpicsSignalRO, "ip", name='ip', kind='config',
+    ip = Component(ID29EpicsSignalRO, "ip", name='ip', kind='config',
                    labels=('detector',))
 
     # baffle slit sub-device
@@ -95,14 +94,4 @@ class M1(DeviceWithLocations):
 
         return output_status
 
-    def test_structure(self):
-        """
-        Test method add later
-        """
 
-        output = {i: (getattr(self, i).test_structure
-                      if hasattr(getattr(self, i), 'test_structure')
-                      else None)
-                  for i in self._signals.keys()}
-
-        return output

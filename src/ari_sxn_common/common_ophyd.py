@@ -1,29 +1,41 @@
 from collections import defaultdict
-from ophyd import (Component, Device, EpicsMotor as EM)
+from ophyd import (Component, Device, EpicsMotor)
 from ophyd.areadetector.base import ADComponent
 from ophyd.areadetector.cam import ProsilicaDetectorCam
 from ophyd.areadetector.detectors import ProsilicaDetector
 from ophyd.areadetector.trigger_mixins import SingleTrigger
 from ophyd.quadem import NSLS_EM, QuadEMPort
 from ophyd.signal import Signal, EpicsSignalRO
+import re
 
-class EpicsMotor(EM):
+
+class ID29EpicsMotor(EpicsMotor):
     """
-    updates ophyd.EpicsMotor so that print(EpicsMotor) returns its name
+    updates ophyd.EpicsMotor so that print(EpicsMotor) returns 'name (label)'
     """
     def __str__(self):
         """
         Updating the __str__ function to return the device name
         """
 
-        return self.name
+        return f'{self.name} ({list(self._ophyd_labels_)[0]})'
+
+
+class ID29EpicsSignalRO(EpicsSignalRO):
+    """
+    updates ophyd.EpicsSignalRO so print(EpicsSignalRO) returns 'name (label)'
+    """
+    def __str__(self):
+        """
+        Updating the __str__ function to return the device name
+        """
+
+        return f'{self.name} ({list(self._ophyd_labels_)[0]})'
 
 
 class PrettyStr():
 
     def __str__(self):
-        exclude = [EpicsMotor, Prosilica, ID29EM, EpicsSignalRO,
-                   DeviceWithLocations.LocationSignal]
         signals = defaultdict(list)
         if hasattr(self, '_signals'):
             for signal in self._signals.keys():
@@ -34,16 +46,19 @@ class PrettyStr():
 
                 signals[label].append(
                     getattr(self, signal).__str__().replace(f'{self.name}_',
-                                                            '')
-                    if type(getattr(self, signal)) not in exclude
-                    else getattr(self, signal).name.replace(f'{self.name}_',
                                                             ''))
 
-        output = f'\n{self.name}'
+        try:
+            self_label = list(self._ophyd_labels_)[0]
+        except IndexError:
+            self_label = 'unknown'
+
+        output = f'\n{self.name} ({self_label})'
         for label, names in signals.items():
             output += f'\n  "{label}s":'
             for name in names:
-                output += f'    {name.replace('\n', '\n    ')}'
+                output += f'    {re.sub(r'\(.*\)', '', 
+                                        name.replace('\n', '\n    '))}'
 
         return output
 
@@ -53,7 +68,8 @@ class ID29EM(NSLS_EM):
     A 29-ID specific version of the NSLS_EM quadEM device.
 
     The main difference between this and the ophyd standard is adjusting
-    the 'kind' of the signals to match what is required at 29-ID.
+    the 'kind' of the signals to match what is required at 29-ID. It also adds
+    a `self.__str__()` method that returns 'name (label)'.
 
     Parameters
     ----------
@@ -87,16 +103,19 @@ class ID29EM(NSLS_EM):
 
     def __str__(self):
         """
-        Updating the __str__ function to return the device name
+        Updating the __str__ function to return 'name (label)'
         """
 
-        return self.name
+        return f'{self.name} ({list(self._ophyd_labels_)[0]})'
 
 
 class Prosilica(SingleTrigger, ProsilicaDetector):
     """
-    This is a class which adds the cam1.array_data attribute required when not
-    image saving.
+    Adds the `cam1.array_data` attribute required when not image saving.
+
+    This class adds the `self.cam.array_data` attribute used when not saving
+    images, the cam attribute and an updated `self.__str__()` method that
+    returns 'name (label)'.
     """
 
     def __init__(self, *args, **kwargs):
@@ -108,8 +127,15 @@ class Prosilica(SingleTrigger, ProsilicaDetector):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
 
-        array_data = ADComponent(EpicsSignalRO, "ArrayData",
+        array_data = ADComponent(ID29EpicsSignalRO, "ArrayData",
                                  kind='normal')
+
+    def __str__(self):
+        """
+        Updating the __str__ function to return 'name (label)'
+        """
+
+        return f'{self.name} ({list(self._ophyd_labels_)[0]})'
 
     cam = Component(ProsilicaCam, "cam1:", kind='normal')
 
@@ -157,14 +183,18 @@ class DeviceWithLocations(PrettyStr, Device):
         """
         An InternalSignal class to be used for updating the 'location' signal
 
-        This ophyd.signal.InternalSignal child class is used to provide a
-        read only signal that returns a list of locations a
-        DeviceWithLocations Device is currently in.
+        This `ophyd.signal.InternalSignal` child class is used to provide a
+        signal that can be set to one of the pre-set 'locations', moving the
+        parent `DeviceWithLocations` Device to. This signal returns a list of
+        locations that the parent is currently in. It also has a
+        `self.available()` method that returns a list of pre-set 'locations'
+        that it can be set too.
 
         NOTE: It is an inner class of DeviceWithLocations as it relies on the
         parent having attributes defined by DeviceWithLocations. It updates
-        the ```self.get(...)``` method to update its value before calling
-        ```super().get(...)```.
+        the ```self.get()``` method to update its value before calling
+        ```super().get()```, the self.set(...) method to move to the pre-set
+        location and the self.available() method.
         """
 
         def get(self, **kwargs):
@@ -203,8 +233,7 @@ class DeviceWithLocations(PrettyStr, Device):
                     # note below tries signal.position and then signal.get() to
                     # work with 'positioners' and 'signals'.
                     signal = getattr(self.parent, signal_name)
-                    # required as EpicsMotor.get() returns a tuple not it's
-                    # position
+                    # EpicsMotor.get() returns a tuple not it's position
                     if hasattr(signal, 'position'):
                         value = getattr(signal, 'position')
                     elif hasattr(signal, 'get'):
@@ -286,7 +315,7 @@ class DeviceWithLocations(PrettyStr, Device):
             status_list = [super().set(value, **kwargs)]
             for signal, data in location_data.items():
                 status_list.append(status_list[-1] &
-                                   getattr(self.parent,signal).set(data[0]))
+                                   getattr(self.parent, signal).set(data[0]))
 
             status_list[0].set_finished()  # The super().set() never completes!
             output_status = status_list[-1]
@@ -370,9 +399,9 @@ class Diagnostic(DeviceWithLocations):
             else:
                 current.mean_value.kind = 'omitted'  # Omit unused currents
 
-    blade = Component(EpicsMotor, 'multi_trans', name='blade',
+    blade = Component(ID29EpicsMotor, 'multi_trans', name='blade',
                       kind='normal', labels=('motor',))
-    filter = Component(EpicsMotor, 'yag_trans', name='filter',
+    filter = Component(ID29EpicsMotor, 'yag_trans', name='filter',
                        kind='normal', labels=('motor',))
 
     camera = Component(Prosilica, 'Camera:', name='camera', kind='normal',
@@ -442,13 +471,13 @@ class BaffleSlit(DeviceWithLocations):
                 current.mean_value.kind = 'omitted'
 
     # The 4 blade motor components
-    top = Component(EpicsMotor, 'Top', name='top', kind='normal',
+    top = Component(ID29EpicsMotor, 'Top', name='top', kind='normal',
                     labels=('motor',))
-    bottom = Component(EpicsMotor, 'Bottom', name='bottom', kind='normal',
+    bottom = Component(ID29EpicsMotor, 'Bottom', name='bottom', kind='normal',
                        labels=('motor',))
-    inboard = Component(EpicsMotor, 'Inboard', name='inboard',
+    inboard = Component(ID29EpicsMotor, 'Inboard', name='inboard',
                         kind='normal', labels=('motor',))
-    outboard = Component(EpicsMotor, 'Outboard', name='outboard',
+    outboard = Component(ID29EpicsMotor, 'Outboard', name='outboard',
                          kind='normal', labels=('motor',))
     # The current read-back of the 4 blades.
     currents = Component(ID29EM, 'Currents:', name='currents',
