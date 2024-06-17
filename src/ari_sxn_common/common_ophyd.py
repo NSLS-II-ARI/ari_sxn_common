@@ -1,3 +1,4 @@
+from collections import defaultdict
 from ophyd import (Component, Device, EpicsMotor)
 from ophyd.areadetector.base import ADComponent
 from ophyd.areadetector.cam import ProsilicaDetectorCam
@@ -5,6 +6,61 @@ from ophyd.areadetector.detectors import ProsilicaDetector
 from ophyd.areadetector.trigger_mixins import SingleTrigger
 from ophyd.quadem import NSLS_EM, QuadEMPort
 from ophyd.signal import Signal, EpicsSignalRO
+import re
+
+
+class ID29EpicsMotor(EpicsMotor):
+    """
+    updates ophyd.EpicsMotor so that print(EpicsMotor) returns 'name (label)'
+    """
+    def __str__(self):
+        """
+        Updating the __str__ function to return the device name
+        """
+
+        return f'{self.name} ({list(self._ophyd_labels_)[0]})'
+
+
+class ID29EpicsSignalRO(EpicsSignalRO):
+    """
+    updates ophyd.EpicsSignalRO so print(EpicsSignalRO) returns 'name (label)'
+    """
+    def __str__(self):
+        """
+        Updating the __str__ function to return the device name
+        """
+
+        return f'{self.name} ({list(self._ophyd_labels_)[0]})'
+
+
+class PrettyStr():
+
+    def __str__(self):
+        signals = defaultdict(list)
+        if hasattr(self, '_signals'):
+            for signal in self._signals.keys():
+                try:
+                    label = list(getattr(self, signal)._ophyd_labels_)[0]
+                except IndexError:
+                    label = 'unknown'
+
+                signals[label].append(
+                    getattr(self, signal).__str__().replace(f'{self.name}_',
+                                                            ''))
+
+        try:
+            self_label = list(self._ophyd_labels_)[0]
+        except IndexError:
+            self_label = 'unknown'
+
+        output = f'\n{self.name} ({self_label})'
+        for label, names in signals.items():
+            output += f'\n  "{label}s":'
+            for name in names:
+                output += f'    {re.sub(r'\(.*\)', '', 
+                                        name.replace('\n', '\n    '))}'
+
+        return output
 
 
 class ID29EM(NSLS_EM):
@@ -12,7 +68,8 @@ class ID29EM(NSLS_EM):
     A 29-ID specific version of the NSLS_EM quadEM device.
 
     The main difference between this and the ophyd standard is adjusting
-    the 'kind' of the signals to match what is required at 29-ID.
+    the 'kind' of the signals to match what is required at 29-ID. It also adds
+    a `self.__str__()` method that returns 'name (label)'.
 
     Parameters
     ----------
@@ -25,28 +82,40 @@ class ID29EM(NSLS_EM):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Remove acquire check from staging as this causes a problem with 'self.unstage()'.
+        # Remove acquire from staging due to a problem with 'self.unstage()'.
         self.stage_sigs.pop('acquire')
         # Generate a list of signals and sub-devices for this qem
         signals_list = [(signal.dotted_name, signal.item)
                         for signal in self.walk_signals()
                         if '.' not in signal.dotted_name]
-        devices_list = [(name, device) for (name, device) in self.walk_subdevices()]
-        for (name, device) in signals_list + devices_list:  # step through all attributes
+        devices_list = [(name, device)
+                        for (name, device) in self.walk_subdevices()]
+        for (name, device) in signals_list + devices_list:
             if name in ['current1', 'current2', 'current3', 'current4']:
                 device.kind = 'hinted'  # Hint this signal for proper readback
-                device.nd_array_port.put('EM180')  # Set the correct port for this value.
-            elif name in ['values_per_read', 'averaging_time', 'integration_time',
-                          'num_average', 'num_acquire', 'em_range']:
-                device.kind = 'config'  # Set signal to 'config' for proper readback
+                device.nd_array_port.put('EM180')  # Set the correct port.
+            elif name in ['values_per_read', 'averaging_time',
+                          'integration_time', 'num_average', 'num_acquire',
+                          'em_range']:
+                device.kind = 'config'  # Set signal to 'config' for readback
             elif hasattr(device, 'kind'):
-                device.kind = 'omitted'  # set signal to 'omitted' for proper readback
+                device.kind = 'omitted'  # set signal to 'omitted'.
+
+    def __str__(self):
+        """
+        Updating the __str__ function to return 'name (label)'
+        """
+
+        return f'{self.name} ({list(self._ophyd_labels_)[0]})'
 
 
 class Prosilica(SingleTrigger, ProsilicaDetector):
     """
-    This is a class which adds the cam1.array_data attribute required when not
-    image saving.
+    Adds the `cam1.array_data` attribute required when not image saving.
+
+    This class adds the `self.cam.array_data` attribute used when not saving
+    images, the cam attribute and an updated `self.__str__()` method that
+    returns 'name (label)'.
     """
 
     def __init__(self, *args, **kwargs):
@@ -58,12 +127,20 @@ class Prosilica(SingleTrigger, ProsilicaDetector):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
 
-        array_data = ADComponent(EpicsSignalRO, "ArrayData", kind='normal')
+        array_data = ADComponent(ID29EpicsSignalRO, "ArrayData",
+                                 kind='normal')
+
+    def __str__(self):
+        """
+        Updating the __str__ function to return 'name (label)'
+        """
+
+        return f'{self.name} ({list(self._ophyd_labels_)[0]})'
 
     cam = Component(ProsilicaCam, "cam1:", kind='normal')
 
 
-class DeviceWithLocations(Device):
+class DeviceWithLocations(PrettyStr, Device):
     # noinspection GrazieInspection
     """
         A child of ophyd.Device that adds a 'location' functionality.
@@ -87,16 +164,17 @@ class DeviceWithLocations(Device):
         *args : arguments
             The arguments passed to the parent 'Device' class
         locations_data : {str: {str:(float, float), ...}, ...}, optional.
-            A dictionary mapping the names of 'locations' to a dictionary mapping
-            the 'signal name' to a (location position, location precision) tuple for
-            the corresponding location. These are used in the 'set_location'
-            method on the diagnostic device to quickly move between locations/
-            setups for the diagnostic. 'location position' is the value that the
-            corresponding 'signal name' axis should be set to when moving to
-            'location'. 'location precision' is used to determine if the device
-            is in 'location' by seeing if the 'signal name's 'current position'
-            is within +/- 'location precision' of 'location position. For str
-            or int signals this value is ignored but should be set as 'None'.
+            A dictionary mapping the names of 'locations' to a dictionary
+            mapping the 'signal name' to a (location position, location
+            precision) tuple for the corresponding location. These are used
+            in the 'set_location' method on the diagnostic device to quickly
+            move between locations/setups for the diagnostic. 'location
+            position' is the value that the corresponding 'signal name' axis
+            should be set to when moving to 'location'. 'location precision'
+            is used to determine if the device is in 'location' by seeing if
+            the 'signal name's 'current position' is within +/- 'location
+            precision' of 'location position. For str or int signals this
+            value is ignored but should be set as 'None'.
         **kwargs : keyword arguments
             The keyword arguments passed to the parent 'Device' class
         """
@@ -105,29 +183,43 @@ class DeviceWithLocations(Device):
         """
         An InternalSignal class to be used for updating the 'location' signal
 
-        This ophyd.signal.InternalSignal child class is used to provide a
-        read only signal that returns a list of locations a
-        DeviceWithLocations Device is currently in.
+        This `ophyd.signal.InternalSignal` child class is used to provide a
+        signal that can be set to one of the pre-set 'locations', moving the
+        parent `DeviceWithLocations` Device to. This signal returns a list of
+        locations that the parent is currently in. It also has a
+        `self.available()` method that returns a list of pre-set 'locations'
+        that it can be set too. It also has a self.__str__() method that returns
+        'name (label)'.
 
         NOTE: It is an inner class of DeviceWithLocations as it relies on the
         parent having attributes defined by DeviceWithLocations. It updates
-        the ```self.get(...)``` method to update its value before calling
-        ```super().get(...)```.
+        the ```self.get()``` method to update its value before calling
+        ```super().get()```, the self.set(...) method to move to the pre-set
+        location and the self.available() method.
         """
+
+        def __str__(self):
+            """
+            Updating the __str__ function to return 'name (label)'
+            """
+
+            return f'{self.name} ({list(self._ophyd_labels_)[0]})'
 
         def get(self, **kwargs):
             """
-            Get method that returns a list of 'locations' that the device is 'in'
+            Method that returns a list of 'locations' that the device is 'in'
 
-            This is a modified get method that looks through self.parent._locations_data
-            to check if the device is 'in' each of the locations and then 'puts' a list
-            of locations where this is true. After this it returns super().get(**kwargs)
-            to ensure that any important information is not lost.
+            This is a modified get method that looks through
+            self.parent._locations_data to check if the device is 'in' each of
+            the locations and then 'puts' a list of locations where this is
+            true. After this it returns super().get(**kwargs) to ensure that
+            any important information is not lost.
 
-            Note, the put at the end is done during the 'get' instead of during the 'set' as
-            each of the motors/signals could be independently moved without passing through
-            the 'set' function. This does result in the case where using 'locations.value'
-            does not guarantee an up-to-date value so take care.
+            Note, the put at the end is done during the 'get' instead of during
+            the 'set' as each of the motors/signals could be independently
+            moved without passing through the 'set' function. This does result
+            in the case where using 'locations.value' does not guarantee an
+            up-to-date value so take care.
 
             Parameters
             ----------
@@ -141,40 +233,54 @@ class DeviceWithLocations(Device):
             """
             # Determine the locations we are currently 'in'.
             locations = []
-            # Note the next line gives an 'accessing a protected member, _locations_data'
-            # warning in my editor. I am accepting the risk !-).
+            # Note the next line gives an 'accessing a protected member,
+            # _locations_data' warning in my editor. I accept the risk !-).
             for location, location_data in self.parent._locations_data.items():
                 value_check = []
                 for signal_name, data in location_data.items():
-                    # note below tries signal.position and then signal.value to work with
-                    # 'positioners' and 'signals' that return floats, ints or strings
+                    # note below tries signal.position and then signal.get() to
+                    # work with 'positioners' and 'signals'.
                     signal = getattr(self.parent, signal_name)
+                    # EpicsMotor.get() returns a tuple not it's position
                     if hasattr(signal, 'position'):
                         value = getattr(signal, 'position')
-                    elif hasattr(signal, 'value'):
-                        value = getattr(signal, 'value')
+                    elif hasattr(signal, 'get'):
+                        value = getattr(signal, 'get')()
                     else:
-                        raise AttributeError(f'during a call to {self.parent}.locations.get()'
-                                             f'a signal ({signal_name}) from '
-                                             f'{self.parent.name}._location_data was found to '
-                                             f'not have a supported attribute. Presently '
-                                             f'supported attributes are '
-                                             f'{self.parent.name}{signal_name}.position and '
-                                             f'{self.parent.name}{signal_name}.value')
+                        raise AttributeError(f'during a call to '
+                                             f'{self.parent}.locations.get() a '
+                                             f'signal ({signal_name}) from '
+                                             f'{self.parent.name}'
+                                             f'._location_data was found to not'
+                                             f' have a supported attribute. '
+                                             f'Presently supported attributes '
+                                             f'are '
+                                             f'{self.parent.name}{signal_name}.'
+                                             f'position and '
+                                             f'{self.parent.name}{signal_name}.'
+                                             f'get()')
 
                     if isinstance(value, float):  # for float values
-                        value_check.append(data[0] - data[1] < value < data[0] + data[1])
-                    elif isinstance(getattr(self.parent, signal_name)):
-                        # This implies the signal is a child DeviceWithLocation LocationSignal
-                        value_check.append(data[0] in value)  # takes care of child
-                    elif isinstance(value, (int, str)):  # for string or int values
+                        value_check.append(data[0] - data[1] < value <
+                                           data[0] + data[1])
+                    elif isinstance(getattr(self.parent, signal_name),
+                                    type(self)):
+                        # This implies the signal is a child DeviceWithLocation
+                        # LocationSignal
+                        value_check.append(data[0] in value)
+                    elif isinstance(value, (int, str)):  # for string/int values
                         value_check.append(data[0] == value)
                     else:
-                        raise ValueError(f'during a call to {self.parent.name}.locations.get()'
+                        raise ValueError(f'during a call to {self.parent.name}.'
+                                         f'locations.get()'
                                          f'a value ({value}) from '
-                                         f'{self.parent.name}._location_data was found to '
-                                         f'be a non-supported data-type. Presently '
-                                         f'supported data-types are floats, ints and strings')
+                                         f'{self.parent.name}._location_data '
+                                         f'was found to be a non-supported '
+                                         f'data-type. Presently supported '
+                                         f'data-types are floats, ints and '
+                                         f'strings or lists from '
+                                         f'DeviceWithLocations '
+                                         f'LocationSignal signals')
                 if all(value_check):
                     locations.append(location)
 
@@ -207,24 +313,26 @@ class DeviceWithLocations(Device):
             """
             try:
                 location_data = self.parent._locations_data[value]
-            except KeyError as exc:  # raise KeyError with a more helpful traceback message
-                traceback_str = (f'A call to {self.name}.set() expected input, {value}, '
-                                 f'to be in {list(self.parent._locations_data.keys())}')
+            except KeyError as exc:  # more helpful traceback message
+                traceback_str = (f'A call to {self.name}.set() expected input,'
+                                 f' {value}, to be in '
+                                 f'{list(self.parent._locations_data.keys())}')
                 raise KeyError(traceback_str) from exc
 
             # Move all the required 'axes' to their locations in parallel.
             status_list = [super().set(value, **kwargs)]
             for signal, data in location_data.items():
-                status_list.append(status_list[-1] & getattr(self.parent, signal).set(data[0]))
+                status_list.append(status_list[-1] &
+                                   getattr(self.parent, signal).set(data[0]))
 
-            status_list[0].set_finished()  # The super().set() status never completes????
+            status_list[0].set_finished()  # The super().set() never completes!
             output_status = status_list[-1]
 
             return output_status
 
         def available(self):
             """
-            A method that returns the list of available locations for set and get.
+            Method that returns the list of available locations.
 
             Returns
             -------
@@ -247,13 +355,13 @@ class DeviceWithLocations(Device):
         self._locations_data = locations_data
 
     locations = Component(LocationSignal, value=[], name='locations',
-                          kind='config')
+                          kind='config', labels=('position',))
 
 
 # noinspection PyUnresolvedReferences
 class Diagnostic(DeviceWithLocations):
     """
-    A DeviceWithLocations ophyd Device used for ARI & SXN 'Diagnostic' units.
+    DeviceWithLocations ophyd Device used for ARI & SXN 'Diagnostic' units.
 
     The ARI & SXN diagnostic units consist of a movable blade that
     holds a number of diagnostic elements (e.g. a YaG screen, a photo-diode,
@@ -299,22 +407,24 @@ class Diagnostic(DeviceWithLocations):
             else:
                 current.mean_value.kind = 'omitted'  # Omit unused currents
 
-    blade = Component(EpicsMotor, 'multi_trans', name='blade',
-                      kind='normal')
-    filter = Component(EpicsMotor, 'yag_trans', name='filter',
-                       kind='normal')
+    blade = Component(ID29EpicsMotor, 'multi_trans', name='blade',
+                      kind='normal', labels=('motor',))
+    filter = Component(ID29EpicsMotor, 'yag_trans', name='filter',
+                       kind='normal', labels=('motor',))
 
-    camera = Component(Prosilica, 'Camera:', name='camera', kind='normal')
+    camera = Component(Prosilica, 'Camera:', name='camera', kind='normal',
+                       labels=('detector',))
 
     # This is added to allow for the mirror current even if no photodiode exists
-    currents = Component(ID29EM, 'Currents:', name='currents', kind='normal')
+    currents = Component(ID29EM, 'Currents:', name='currents',
+                         kind='normal', labels=('detector',))
 
     def trigger(self):
         """
         A trigger functions that also triggers the currents quad_em and camera
         """
 
-        # This appears to resolve a connection time-out error, but I have no idea why.
+        # resolves a connection time-out error, but I have no idea why.
         _ = self.camera.cam.array_counter.read()
         # trigger the child components that need it
         camera_status = self.camera.trigger()
@@ -330,15 +440,15 @@ class BaffleSlit(DeviceWithLocations):
     """
     A DeviceWithLocations ophyd Device used for ARI & SXN 'Baffle Slit' units.
 
-    The ARI & SXN baffle slit units consist of four movable blades that can be used
-    to 'trim' the beam. The current to ground can be read from each of these blades
-    as well which gives a way to determine the 'position' of the beam at the baffle
-    slit location in real time. The baffle slit units also have a 'set_location'
-    method that allows the user to quickly move to the locations defined by the
-    'locations' argument, this could be used to quickly move the blades to the
-    pre-determined 'operation' position. The 'location' attribute is a read-only
-    ophyd signal that returns a list of 'locations' that the device is currently
-    'in'.
+    The ARI & SXN baffle slit units consist of four movable blades that can be
+    used to 'trim' the beam. The current to ground can be read from each of
+    these blades as well which gives a way to determine the 'position' of the
+    beam at the baffle slit location in real time. The baffle slit units also
+    have a 'set_location' method that allows the user to quickly move to the
+    locations defined by the 'locations' argument, this could be used to quickly
+    move the blades to the pre-determined 'operation' position. The 'location'
+     attribute is a read-only ophyd signal that returns a list of 'locations'
+     that the device is currently 'in'.
 
     Parameters
     ----------
@@ -351,7 +461,7 @@ class BaffleSlit(DeviceWithLocations):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # names to give the ```currents.current*.mean_value``` in self.read*() dicts.
+        # names to give the ```currents.current*.mean_value``` components
         current_signals = {'current1': 'top', 'current2': 'bottom',
                            'current3': 'inboard', 'current4': 'outboard'}
         # the list of ```currents.current*``` attributes
@@ -363,18 +473,23 @@ class BaffleSlit(DeviceWithLocations):
             current = getattr(currents, current_name)
             if current_name in current_signals.keys():
                 current.mean_value.name = (f'{self.name}_currents_'
-                                           f'{current_signals[current_name]}')  # Adjust the name
-                setattr(currents, current_signals[current_name], current)  # Create a symlink
+                                           f'{current_signals[current_name]}')
+                setattr(currents, current_signals[current_name], current)
             else:
-                current.mean_value.kind = 'omitted'  # Omit from reading any currents not used.
+                current.mean_value.kind = 'omitted'
 
     # The 4 blade motor components
-    top = Component(EpicsMotor, 'Top', name='top', kind='normal')
-    bottom = Component(EpicsMotor, 'Bottom', name='bottom', kind='normal')
-    inboard = Component(EpicsMotor, 'Inboard', name='inboard', kind='normal')
-    outboard = Component(EpicsMotor, 'Outboard', name='outboard', kind='normal')
+    top = Component(ID29EpicsMotor, 'Top', name='top', kind='normal',
+                    labels=('motor',))
+    bottom = Component(ID29EpicsMotor, 'Bottom', name='bottom',
+                       kind='normal', labels=('motor',))
+    inboard = Component(ID29EpicsMotor, 'Inboard', name='inboard',
+                        kind='normal', labels=('motor',))
+    outboard = Component(ID29EpicsMotor, 'Outboard', name='outboard',
+                         kind='normal', labels=('motor',))
     # The current read-back of the 4 blades.
-    currents = Component(ID29EM, 'Currents:', name='currents', kind='normal')
+    currents = Component(ID29EM, 'Currents:', name='currents',
+                         kind='normal', labels=('detector',))
 
     def trigger(self):
         """

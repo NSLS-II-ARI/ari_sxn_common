@@ -1,9 +1,9 @@
-from common_ophyd import BaffleSlit, Diagnostic
-from ophyd import (Component, Device, EpicsMotor)
-from ophyd.signal import EpicsSignalRO
+from common_ophyd import (BaffleSlit, Diagnostic, DeviceWithLocations,
+                          ID29EpicsMotor, ID29EpicsSignalRO)
+from ophyd import Component
 
 
-class M1(Device):
+class M1(DeviceWithLocations):
     """
     The ophyd `Device` that is used to talk to the ARI M1 mirror section.
 
@@ -18,26 +18,34 @@ class M1(Device):
         A new __init__ method that links photocurrent to the self.diag quadem
         """
         super().__init__(*args, **kwargs)
-        self.diag.currents.current1.mean_value.name = f'{self.name}_photocurrent'
+        self.diag.currents.current1.mean_value.name = (f'{self.name}'
+                                                       f'_photocurrent')
         self.diag.currents.current1.mean_value.kind = 'normal'
         setattr(self, 'photocurrent', self.diag.currents.current1.mean_value)
 
     # Mirror motor axes
-    Ry_coarse = Component(EpicsMotor, 'Ry_coarse', name='Ry_coarse',
-                          kind='normal')
-    Ry_fine = Component(EpicsMotor, 'Ry_fine', name='Ry_fine',
-                        kind='normal')
-    Rz = Component(EpicsMotor, 'Rz', name='Rz', kind='normal')
-    x = Component(EpicsMotor, 'x', name='x', kind='normal')
-    y = Component(EpicsMotor, 'y', name='y', kind='normal')
+    Ry_coarse = Component(ID29EpicsMotor, 'Ry_coarse', name='Ry_coarse',
+                          kind='normal', labels=('motor',))
+    Ry_fine = Component(ID29EpicsMotor, 'Ry_fine', name='Ry_fine',
+                        kind='normal', labels=('motor',))
+    Rz = Component(ID29EpicsMotor, 'Rz', name='Rz', kind='normal',
+                   labels=('motor',))
+    x = Component(ID29EpicsMotor, 'x', name='x', kind='normal',
+                  labels=('motor',))
+    y = Component(ID29EpicsMotor, 'y', name='y', kind='normal',
+                  labels=('motor',))
 
     # Mirror chamber vacuum axes
-    ccg = Component(EpicsSignalRO, "ccg", name='ccg', kind='config')
-    tcg = Component(EpicsSignalRO, "tcg", name='tcg', kind='config')
-    ip = Component(EpicsSignalRO, "ip", name='ip', kind='config')
+    ccg = Component(ID29EpicsSignalRO, "ccg", name='ccg', kind='config',
+                    labels=('detector',))
+    tcg = Component(ID29EpicsSignalRO, "tcg", name='tcg', kind='config',
+                    labels=('detector',))
+    ip = Component(ID29EpicsSignalRO, "ip", name='ip', kind='config',
+                   labels=('detector',))
 
     # baffle slit sub-device
     slits = Component(BaffleSlit, "baffle:", name='slits', kind='normal',
+                      labels=('device',),
                       locations_data={'in': {'top': (-12.7, 0.1),
                                              'bottom': (12.7, 0.1),
                                              'inboard': (12.7, 0.1),
@@ -57,6 +65,7 @@ class M1(Device):
 
     # diagnostic sub-device
     diag = Component(Diagnostic, "diag:", name='diag', kind='normal',
+                     labels=('device',),
                      locations_data={'Out': {'blade': (0, 1)},
                                      'YaG': {'blade': (-31.75, 1),
                                              'filter': (0, 1)},
@@ -70,14 +79,17 @@ class M1(Device):
         A trigger function that adds triggering of the baffleslit and diagnostic
         """
 
-        # This appears to resolve a connection time-out error, but I have no idea why.
+        # This resolves a connection time-out error, but I have no idea why.
         _ = self.diag.camera.cam.array_counter.read()
+
+        super_status = super().trigger()
 
         # trigger the child components that need it
         baffle_status = self.slits.trigger()
         diag_status = self.diag.trigger()
-        super_status = super().trigger()
 
-        output_status = baffle_status & diag_status & super_status
+        # Not sure why but status = status & status & status fails to complete
+        child_status = baffle_status & diag_status
+        output_status = child_status & super_status
 
         return output_status
