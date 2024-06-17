@@ -13,6 +13,14 @@ class ID29EpicsMotor(EpicsMotor):
     """
     updates ophyd.EpicsMotor so that print(EpicsMotor) returns 'name (label)'
     """
+    def __init__(self, *args, **kwargs):
+        """
+        Modifies the kind of some signals
+        """
+        super().__init__(*args, **kwargs)
+        self.user_setpoint.kind = 'normal'
+        self.user_readback.kind = 'normal'
+
     def __str__(self):
         """
         Updating the __str__ function to return the device name

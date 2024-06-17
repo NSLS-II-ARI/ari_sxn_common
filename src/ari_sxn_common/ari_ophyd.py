@@ -20,7 +20,7 @@ class M1(DeviceWithLocations):
         super().__init__(*args, **kwargs)
         self.diag.currents.current1.mean_value.name = (f'{self.name}'
                                                        f'_photocurrent')
-        self.diag.currents.current1.mean_value.kind = 'normal'
+        self.diag.currents.current1.mean_value.kind = 'hinted'
         setattr(self, 'photocurrent', self.diag.currents.current1.mean_value)
 
     # Mirror motor axes
@@ -82,7 +82,7 @@ class M1(DeviceWithLocations):
         # This resolves a connection time-out error, but I have no idea why.
         _ = self.diag.camera.cam.array_counter.read()
 
-        super_status = super().trigger()
+        # super_status = super().trigger()
 
         # trigger the child components that need it
         baffle_status = self.slits.trigger()
