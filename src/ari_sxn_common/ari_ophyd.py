@@ -88,8 +88,9 @@ class M1(DeviceWithLocations):
         baffle_status = self.slits.trigger()
         diag_status = self.diag.trigger()
 
+        #super_status.set_finished()
         # Not sure why but status = status & status & status fails to complete
         child_status = baffle_status & diag_status
-        output_status = child_status & super_status
+        #output_status = child_status & super_status
 
-        return output_status
+        return child_status
