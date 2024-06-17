@@ -5,7 +5,7 @@ from ophyd.areadetector.cam import ProsilicaDetectorCam
 from ophyd.areadetector.detectors import ProsilicaDetector
 from ophyd.areadetector.trigger_mixins import SingleTrigger
 from ophyd.quadem import NSLS_EM, QuadEMPort
-from ophyd.signal import Signal, EpicsSignalRO
+from ophyd.signal import Signal, EpicsSignalRO, EpicsSignal
 import re
 
 
@@ -137,6 +137,8 @@ class Prosilica(SingleTrigger, ProsilicaDetector):
 
         array_data = ADComponent(ID29EpicsSignalRO, "ArrayData",
                                  kind='normal')
+        array_counter = ADComponent(EpicsSignal, 'ArrayCounter',
+                                    kind='config', timeout=10)
 
     def __str__(self):
         """

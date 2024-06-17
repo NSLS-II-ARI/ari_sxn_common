@@ -79,18 +79,13 @@ class M1(DeviceWithLocations):
         A trigger function that adds triggering of the baffleslit and diagnostic
         """
 
-        # This resolves a connection time-out error, but I have no idea why.
-        _ = self.diag.camera.cam.array_counter.read()
-
-        # super_status = super().trigger()
+        super_status = super().trigger()
 
         # trigger the child components that need it
         baffle_status = self.slits.trigger()
         diag_status = self.diag.trigger()
 
-        #super_status.set_finished()
-        # Not sure why but status = status & status & status fails to complete
-        child_status = baffle_status & diag_status
-        #output_status = child_status & super_status
+        # Commented out the diag_status here while I resolve the timeout issue
+        output_status = baffle_status & super_status # & diag_status
 
-        return child_status
+        return output_status
