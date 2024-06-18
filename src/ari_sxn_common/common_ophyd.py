@@ -5,17 +5,52 @@ from ophyd.areadetector.cam import ProsilicaDetectorCam
 from ophyd.areadetector.detectors import ProsilicaDetector
 from ophyd.areadetector.trigger_mixins import SingleTrigger
 from ophyd.quadem import NSLS_EM, QuadEMPort
-from ophyd.signal import Signal, EpicsSignalRO
+from ophyd.signal import Signal, EpicsSignalRO, EpicsSignal
 import re
 
 
 class ID29EpicsMotor(EpicsMotor):
     """
-    updates ophyd.EpicsMotor so that print(EpicsMotor) returns 'name (label)'
+    Updates ophyd.EpicsMotor so that print(EpicsMotor) returns 'name (label)'
+
+    This is an `ophyd.EpicsMotor` that adds some 29ID specific kind values and
+    a custom `__str__()` method that matches that used for the `PrettyStr`
+    class. In this case however it does not include any child signals, as this
+    is the lowest level device that users are likely to interact with.
+
+    Parameters
+    ----------
+    *args : arguments
+        The arguments passed to the parent 'EpicsMotor' class
+    **kwargs : keyword arguments
+        The keyword arguments passed to the parent 'EpicsMotor' class
+
+    Attributes
+    ----------
+    *attrs : many
+        The attributes of the parent `EpicsMotor` class.
+
+    Methods
+    -------
+    *methods : many
+        The methods of the parent `EpicsMotor` class.
+    __init__(*args, **kwargs) :
+        Runs the parent `EpicsMotor` __init__() method and then updates the
+        'kind' attribute on a few attributes.
+    __str__() :
+        Returns self.name (self._ophyd_labels_)
     """
+    def __init__(self, *args, **kwargs):
+        """
+        Modifies the kind of some signals to match the 29ID requirements
+        """
+        super().__init__(*args, **kwargs)
+        self.user_setpoint.kind = 'normal'
+        self.user_readback.kind = 'hinted'
+
     def __str__(self):
         """
-        Updating the __str__ function to return the device name
+        Updating the __str__ function to return the device 'name (label)'.
         """
 
         return f'{self.name} ({list(self._ophyd_labels_)[0]})'
@@ -23,19 +58,63 @@ class ID29EpicsMotor(EpicsMotor):
 
 class ID29EpicsSignalRO(EpicsSignalRO):
     """
-    updates ophyd.EpicsSignalRO so print(EpicsSignalRO) returns 'name (label)'
+    Updates ophyd.EpicsSignalRO so print(EpicsSignalRO) returns 'name (label)'
+
+    This is an `ophyd.EpicsSignalRO` that adds a custom `__str__()` method that
+    matches that used for the `PrettyStr` class. In this case however it does
+    not include any child signals, as this is the lowest level device that users
+    are likely to interact with.
+
+    Parameters
+    ----------
+    *args : arguments
+        The arguments passed to the parent `EpicsSignalRO` class
+    **kwargs : keyword arguments
+        The keyword arguments passed to the parent 'EpicsSignalRO' class
+
+    Attributes
+    ----------
+    *attrs : many
+        The attributes of the parent `EpicsSignalRO` class.
+
+    Methods
+    -------
+    *methods : many
+        The methods of the parent `EpicsSignalRO` class.
+    __str__() :
+        Returns self.name (self._ophyd_labels_)
     """
     def __str__(self):
         """
-        Updating the __str__ function to return the device name
+        Updating the __str__ function to return the device 'name (label)'.
         """
 
         return f'{self.name} ({list(self._ophyd_labels_)[0]})'
 
 
 class PrettyStr():
+    """
+    A class that provides a better string when using `print(PrettyStr)`
 
+    This class has a custom `__str__()` method that returns a formatted string
+    that includes the device name as well as child signals grouped by the
+    `signal._ophyd_labels_` list.
+
+    Parameters
+    ----------
+    None
+
+    Methods
+    -------
+    __str__() :
+        Returns a formatted string indicating it's name and all of the child
+        signals grouped by their `_ophyd_labels_`.
+    """
     def __str__(self):
+        """
+        Updates the __str__() method to provide the formatted string described
+        in the class definition.
+        """
         signals = defaultdict(list)
         if hasattr(self, '_signals'):
             for signal in self._signals.keys():
@@ -69,21 +148,40 @@ class ID29EM(NSLS_EM):
 
     The main difference between this and the ophyd standard is adjusting
     the 'kind' of the signals to match what is required at 29-ID. It also adds
-    a `self.__str__()` method that returns 'name (label)'.
+    a `self.__str__()` method that matches that used for the `PrettyStr`
+    class. In this case however it does not include any child signals, as this
+    is the lowest level device that users are likely to interact with.
 
     Parameters
     ----------
     *args : arguments
-        The arguments passed to the parent 'Device' class
+        The arguments passed to the parent 'NSLS_EM' class
     **kwargs : keyword arguments
-            The keyword arguments passed to the parent 'Device' class
+        The keyword arguments passed to the parent 'NSLS_EM' class
+
+    Attributes
+    ----------
+    *attrs : many
+        The attributes of the parent `NSLS_EM` class.
+    conf : QuadEMPort
+        updates the QuadEMport component of the `NSLS_EM` parent with a new
+        port name.
+
+    Methods
+    -------
+    *methods : many
+        The methods of the parent `NSLS_EM` class.
+    __init__(*args, **kwargs) :
+        Runs the parent `NSLS_EM` __init__() method and then updates the
+        'kind' attribute on a few attributes.
+    __str__() :
+        Returns self.name (self._ophyd_labels_)
     """
     conf = Component(QuadEMPort, port_name='EM180', kind='config')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Remove acquire from staging due to a problem with 'self.unstage()'.
-        self.stage_sigs.pop('acquire')
+
         # Generate a list of signals and sub-devices for this qem
         signals_list = [(signal.dotted_name, signal.item)
                         for signal in self.walk_signals()
@@ -115,7 +213,35 @@ class Prosilica(SingleTrigger, ProsilicaDetector):
 
     This class adds the `self.cam.array_data` attribute used when not saving
     images, the cam attribute and an updated `self.__str__()` method that
-    returns 'name (label)'.
+    matches that used for the `PrettyStr` class. In this case however it does
+    not include any child signals, as this is the lowest level device that users
+    are likely to interact with.
+
+    Parameters
+    ----------
+    *args : arguments
+        The arguments passed to the parent 'ProsilicaDetector' class
+    **kwargs : keyword arguments
+        The keyword arguments passed to the parent 'ProsilicaDetector' class
+
+    Attributes
+    ----------
+    *attrs : many
+        The attributes of the parent `SingleTrigger` and `ProsilicaDetector`
+        classes.
+    cam : ProsilicaCam
+        The cam attribute for this area-detector.
+
+    Methods
+    -------
+    *methods : many
+        The methods of the parent `SingleTrigger` and `ProsilicaDetector`
+        classes.
+    __init__(*args, **kwargs) :
+        Runs the parent `ProsilicaDetector` __init__() method and then updates
+        the 'kind' attribute on a few attributes.
+    __str__() :
+        Returns self.name (self._ophyd_labels_)
     """
 
     def __init__(self, *args, **kwargs):
@@ -124,11 +250,42 @@ class Prosilica(SingleTrigger, ProsilicaDetector):
         self.cam.array_data.kind = 'normal'
 
     class ProsilicaCam(ProsilicaDetectorCam):
+        """
+        A `ProsillicaDetectorCam` class that adds some extra attributes
+
+        Parameters
+        ----------
+        *args : arguments
+            The arguments passed to the parent 'ProsilicaDetectorCam' class
+        **kwargs : keyword arguments
+            The keyword arguments passed to the parent 'ProsilicaDetectorCam'
+            class
+
+        Attributes
+        ----------
+        *attrs : many
+            The attributes of the parent `ProsilicaDetectorCam` class.
+        array_data : ID29EpicsSignalRO
+            An attribute that holds the array data for this camera.
+        array_counter : EpicsSignal
+            An attribute that is used to indicate how far through the trigger
+            process the detector is.
+
+        Methods
+        -------
+        *methods : many
+            The methods of the parent `ProsilicaDetectorCam` class.
+        __init__(*args, **kwargs) :
+            Runs the parent `ProsilicaDetector` __init__() method and then updates
+            the 'kind' attribute on a few attributes.
+        """
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
 
         array_data = ADComponent(ID29EpicsSignalRO, "ArrayData",
                                  kind='normal')
+        array_counter = ADComponent(EpicsSignal, 'ArrayCounter',
+                                    kind='config', timeout=10)
 
     def __str__(self):
         """
@@ -141,61 +298,108 @@ class Prosilica(SingleTrigger, ProsilicaDetector):
 
 
 class DeviceWithLocations(PrettyStr, Device):
-    # noinspection GrazieInspection
     """
-        A child of ophyd.Device that adds a 'location' functionality.
+    A child of ophyd.Device that adds a 'location' functionality.
 
-        The location functionality adds new properties (self._locations_data,
-        self.available_locations), a new child signal (self.locations) and
-        a new method (self.set_location). These allow for a collection of
-        'locations' to be defined which can be:
-        * set via ```self.set_location(location)```
-        * read via ```self.locations.read()```
+    The location functionality adds new properties (self._locations_data, a new
+    child signal (self.locations), a new signal (self.available_locations) and a
+     new method (self.set_location). These allow for a collection of 'locations'
+      to be defined which can be:
+        * set via `self.locations.set('...')`
+        * read via `self.locations.read()`
+        * A list of available locations is returned from
+          `self.locations.available()`
 
-        The list of available locations to use in the ```self.set_location()```
-        method can be found with the ```self.available_locations``` property.
-        As the 'locations' attribute is a read-only ophyd component that returns
-        a list of 'locations' that the device is currently 'in' this is set to
-        ```kind='config'``` by default so that it will be read using
-        ```read_configuration()``` and hence recorded in a plans metadata.
+    It also includes the new `self.__str__()` method defined in the `PrettyStr`
+    class.
 
-        Parameters
-        ----------
-        *args : arguments
-            The arguments passed to the parent 'Device' class
-        locations_data : {str: {str:(float, float), ...}, ...}, optional.
-            A dictionary mapping the names of 'locations' to a dictionary
-            mapping the 'signal name' to a (location position, location
-            precision) tuple for the corresponding location. These are used
-            in the 'set_location' method on the diagnostic device to quickly
-            move between locations/setups for the diagnostic. 'location
-            position' is the value that the corresponding 'signal name' axis
-            should be set to when moving to 'location'. 'location precision'
-            is used to determine if the device is in 'location' by seeing if
-            the 'signal name's 'current position' is within +/- 'location
-            precision' of 'location position. For str or int signals this
-            value is ignored but should be set as 'None'.
-        **kwargs : keyword arguments
-            The keyword arguments passed to the parent 'Device' class
-        """
+    Parameters
+    ----------
+    *args : arguments
+        The arguments passed to the parent 'Device' class
+    locations_data : {str: {str:(float, float), ...}, ...}, optional.
+        A dictionary mapping the names of 'locations' to a dictionary mapping
+        the 'signal name' to a (location position, location precision) tuple for
+        the corresponding location. These are used in the 'set_location' method
+        on the diagnostic device to quickly move between locations/setups for
+        the diagnostic. 'location position' is the value that the corresponding
+        'signal name' axis should be set to when moving to 'location'.
+        'location precision' is used to determine if the device is in 'location'
+         by seeing if the 'signal name's 'current position' is within +/-
+         'location precision' of 'location position'. For str or int signals
+         this value is ignored but should be set as 'None'.
+    **kwargs : keyword arguments
+        The keyword arguments passed to the parent 'Device' class
+
+    Attributes
+    ----------
+    *attrs : many
+        The attributes of the parent `Device` and `PrettyStr` classes.
+    _locations_data : Dict
+        A dictionary containing the information on the locations as passed into
+        the self.__init__() method via locations_data.
+    locations : LocationSignal
+        The signal that contains the methods used for setting and reading
+        the devices location(s).
+
+    Methods
+    -------
+    *methods : many
+        The methods of the parent `Device` and `PrettyStr` class.
+    __init__(*args, **kwargs) :
+        Runs the parent `Device` __init__() method and then adds the
+        `_locations_data` attribute.
+    """
 
     class LocationSignal(Signal):
         """
         An InternalSignal class to be used for updating the 'location' signal
 
-        This `ophyd.signal.InternalSignal` child class is used to provide a
-        signal that can be set to one of the pre-set 'locations', moving the
-        parent `DeviceWithLocations` Device to. This signal returns a list of
-        locations that the parent is currently in. It also has a
-        `self.available()` method that returns a list of pre-set 'locations'
-        that it can be set too. It also has a self.__str__() method that returns
-        'name (label)'.
+        This `ophyd.signal.Signal` child class is used to provide a
+        signal that can be set, via self.set('...'), to one of the pre-set
+        'locations' from `self.parent._locations_data.keys()`, The 'set' will
+        move the attributes of the parent `DeviceWithLocations` Device to the
+        corresponding positions defined in `self.parent._locations_data`
+        associated with the 'location' key. When 'read' using `self.get()` or
+        self.read() this signal returns a list of locations (keys from the
+        `self.parent._locations_data`) that the parent is currently in. It also
+        has a `self.available()` method that returns a list of pre-set
+        'locations' that it can be set too.
+
+        It also has a self.__str__() method that returns 'name (label)' to match
+        the structure.
 
         NOTE: It is an inner class of DeviceWithLocations as it relies on the
         parent having attributes defined by DeviceWithLocations. It updates
         the ```self.get()``` method to update its value before calling
         ```super().get()```, the self.set(...) method to move to the pre-set
         location and the self.available() method.
+
+        Parameters
+        ----------
+        *args : arguments
+            The arguments passed to the parent 'Signal' class
+        **kwargs : keyword arguments
+            The keyword arguments passed to the parent 'Signal' class
+
+        Attributes
+        ----------
+        *attrs : many
+            The attributes of the parent `Signal` class.
+
+        Methods
+        -------
+        *methods : many
+            The methods of the parent `Signal` class.
+        __str__() :
+            Returns self.name (self._ophyd_labels_)
+        get() :
+            Returns a list of locations the parent device is currently 'in'.
+        set(location) :
+            Sets the 'location' of the parent device to location.
+        available() :
+            returns a list of possible 'locations' that the parent device can
+            be set to.
         """
 
         def __str__(self):
@@ -382,6 +586,24 @@ class Diagnostic(DeviceWithLocations):
         A boolean indicating if the diagnostic contains a photodiode or not
     **kwargs : keyword arguments
         The keyword arguments passed to the parent 'Device' class
+
+    Attributes
+    ----------
+    *attrs : many
+        The attributes of the parent `DeviceWithLocations` class.
+
+    Methods
+    -------
+    *methods : many
+        The methods of the parent `DeviceWithLocations` class.
+    __init__(*args, **kwargs) :
+        Runs the parent `DeviceWithLocations` __init__() method, adds some
+        symlinks to, and renames, existing attributes and then updates the
+        'kind' attribute on a few attributes.
+    trigger() :
+        Calls the parent `DeviceWithLocations` trigger method, the child camera
+        trigger method, and the child currents trigger method and returns a
+        combined status object.
     """
 
     def __init__(self, *args, photodiode=False, **kwargs):
@@ -429,6 +651,7 @@ class Diagnostic(DeviceWithLocations):
         # trigger the child components that need it
         camera_status = self.camera.trigger()
         currents_status = self.currents.trigger()
+        # Call the parent trigger
         super_status = super().trigger()
 
         output_status = camera_status & currents_status & super_status
@@ -447,8 +670,8 @@ class BaffleSlit(DeviceWithLocations):
     have a 'set_location' method that allows the user to quickly move to the
     locations defined by the 'locations' argument, this could be used to quickly
     move the blades to the pre-determined 'operation' position. The 'location'
-     attribute is a read-only ophyd signal that returns a list of 'locations'
-     that the device is currently 'in'.
+    attribute is a read-only ophyd signal that returns a list of 'locations'
+    that the device is currently 'in'.
 
     Parameters
     ----------
@@ -456,6 +679,23 @@ class BaffleSlit(DeviceWithLocations):
         The arguments passed to the grandparent 'Device' class
     **kwargs : keyword arguments
         The keyword arguments passed to the grandparent 'Device' class
+
+    Attributes
+    ----------
+    *attrs : many
+        The attributes of the parent `DeviceWithLocations` class.
+
+    Methods
+    -------
+    *methods : many
+        The methods of the parent `DeviceWithLocations` class.
+    __init__(*args, **kwargs) :
+        Runs the parent `DeviceWithLocations` __init__() method, adds some
+        symlinks to, and renames, existing attributes and then updates the
+        'kind' attribute on a few attributes.
+    trigger() :
+        Calls the parent `DeviceWithLocations` trigger method and the child
+        currents trigger method and returns a combined status object.
     """
 
     def __init__(self, *args, **kwargs):

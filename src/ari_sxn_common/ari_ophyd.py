@@ -12,6 +12,47 @@ class M1(DeviceWithLocations):
     motors, detectors and vacuum signals for these. It is designed to
     provide an intuitive, tab-to-complete based, interface to find all
     the components associated with the M1 mirror.
+
+    Parameters
+    ----------
+    *args : arguments
+        The arguments passed to the parent `DeviceWithLocations` class
+    **kwargs : keyword arguments
+        The keyword arguments passed to the parent `DeviceWithLocations` class
+
+    Attributes
+    ----------
+    *attrs : many
+        The attributes of the parent `DeviceWithLocations` class.
+    Ry_coarse : ID29EpicsMotor
+        The motor for coarse mirror rotation around the y axis.
+    Ry_fine : ID29EpicsMotor
+        The motor for fine mirror rotation around the y axis.
+    Rz : ID29EpicsMotor
+        The motor for mirror rotation around the z axis.
+    x : ID29EpicsMotor
+        The motor for mirror motion along the x axis.
+    y : ID29EpicsMotor
+        The motor for mirror motion along the y axis.
+    ccg : ID29EpicsSignalRO
+        The cold cathode gauge reading in the mirror chamber
+    tcg : ID29EpicsSignalRO
+        The thermo-couple (Pirani) gauge reading in the mirror chamber
+    ip : ID29EpicsSignalRO
+        The ion pump reading in the mirror chamber
+    slits : BaffleSlit
+        The baffle slit downstream of the mirror chamber
+    diag : Diagnostic
+        The diagnostic device downstream of the mirror chamber
+
+    Methods
+    -------
+    *methods : many
+        The methods of the parent `DeviceWithLocations` class.
+    trigger() :
+        Runs the trigger methods from the parent `DeviceWithLocations` class,
+        the child `BaffleSlit` class, and the child `Diagnostic` class and
+        returns a combination of all of the status objects.
     """
     def __init__(self, *args, **kwargs):
         """
@@ -20,7 +61,7 @@ class M1(DeviceWithLocations):
         super().__init__(*args, **kwargs)
         self.diag.currents.current1.mean_value.name = (f'{self.name}'
                                                        f'_photocurrent')
-        self.diag.currents.current1.mean_value.kind = 'normal'
+        self.diag.currents.current1.mean_value.kind = 'hinted'
         setattr(self, 'photocurrent', self.diag.currents.current1.mean_value)
 
     # Mirror motor axes
@@ -79,17 +120,12 @@ class M1(DeviceWithLocations):
         A trigger function that adds triggering of the baffleslit and diagnostic
         """
 
-        # This resolves a connection time-out error, but I have no idea why.
-        _ = self.diag.camera.cam.array_counter.read()
-
         super_status = super().trigger()
 
         # trigger the child components that need it
         baffle_status = self.slits.trigger()
         diag_status = self.diag.trigger()
 
-        # Not sure why but status = status & status & status fails to complete
-        child_status = baffle_status & diag_status
-        output_status = child_status & super_status
+        output_status = baffle_status & super_status & diag_status
 
         return output_status
