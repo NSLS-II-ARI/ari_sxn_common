@@ -16,9 +16,41 @@ class M1(DeviceWithLocations):
     Parameters
     ----------
     *args : arguments
-        The arguments passed to the parent 'DeviceWithLocations' class
+        The arguments passed to the parent `DeviceWithLocations` class
     **kwargs : keyword arguments
-        The keyword arguments passed to the parent 'DeviceWithLocations' class
+        The keyword arguments passed to the parent `DeviceWithLocations` class
+
+    Attributes
+    ----------
+    *attrs : many
+        The attributes of the parent `DeviceWithLocations` class.
+    Ry_coarse : ID29EpicsMotor
+        The motor for coarse mirror rotation around the y axis.
+    Ry_fine : ID29EpicsMotor
+        The motor for fine mirror rotation around the y axis.
+    Rz : ID29EpicsMotor
+        The motor for mirror rotation around the z axis.
+    x : ID29EpicsMotor
+        The motor for mirror motion along the x axis.
+    y : ID29EpicsMotor
+        The motor for mirror motion along the y axis.
+    ccg : ID29EpicsSignalRO
+        The cold cathode gauge reading in the mirror chamber
+    tcg : ID29EpicsSignalRO
+        The thermo-couple (Pirani) gauge reading in the mirror chamber
+    ip : ID29EpicsSignalRO
+        The ion pump reading in the mirror chamber
+    slits : BaffleSlit
+        The baffle slit downstream of the mirror chamber
+    diag : Diagnostic
+        The diagnostic device downstream of the mirror chamber
+
+    Methods
+    -------
+    trigger() :
+        Runs the trigger methods from the parent `DeviceWithLocations` class,
+        the child `BaffleSlit` class, and the child `Diagnostic` class and
+        returns a combination of all of the status objects.
     """
     def __init__(self, *args, **kwargs):
         """
