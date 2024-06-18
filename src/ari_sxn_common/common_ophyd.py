@@ -153,9 +153,11 @@ class PrettyStrForSignal():
     """
         A class that provides a better string when using `print(PrettyStr)`
 
-        This class has a custom `__str__()` method that returns a formatted string
-        that includes the device name as well as child signals grouped by the
-        `signal._ophyd_labels_` list.
+        This class has a custom `__str__()` method that returns a formatted
+        string that includes the device name as well as the
+        `signal._ophyd_labels_` list. It is designed for use with the
+        `PrettyStr` class but on hte lowest level signals that should be
+        accessed by users.
 
         Parameters
         ----------
