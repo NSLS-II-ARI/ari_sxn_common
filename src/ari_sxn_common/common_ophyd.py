@@ -52,8 +52,11 @@ class ID29EpicsMotor(EpicsMotor):
         """
         Updating the __str__ function to return the device 'name (label)'.
         """
-
-        return f'{self.name} ({list(self._ophyd_labels_)[0]})'
+        try:
+            self_label = self._ophyd_labels_
+        except IndexError:
+            self_label = {'unknown', }
+        return f'{self.name} ({str(self_label)[1:-1]})'
 
 
 class ID29EpicsSignalRO(EpicsSignalRO):
@@ -89,7 +92,11 @@ class ID29EpicsSignalRO(EpicsSignalRO):
         Updating the __str__ function to return the device 'name (label)'.
         """
 
-        return f'{self.name} ({list(self._ophyd_labels_)[0]})'
+        try:
+            self_label = self._ophyd_labels_
+        except IndexError:
+            self_label = {'unknown', }
+        return f'{self.name} ({str(self_label)[1:-1]})'
 
 
 class PrettyStr():
@@ -119,20 +126,20 @@ class PrettyStr():
         if hasattr(self, '_signals'):
             for signal in self._signals.keys():
                 try:
-                    label = list(getattr(self, signal)._ophyd_labels_)[0]
+                    labels = list(getattr(self, signal)._ophyd_labels_)
                 except IndexError:
-                    label = 'unknown'
-
-                signals[label].append(
-                    getattr(self, signal).__str__().replace(f'{self.name}_',
+                    labels = {'unknown', }
+                for label in labels:
+                    signals[label].append(
+                        getattr(self, signal).__str__().replace(f'{self.name}_',
                                                             ''))
 
         try:
-            self_label = list(self._ophyd_labels_)[0]
+            self_label = self._ophyd_labels_
         except IndexError:
-            self_label = 'unknown'
+            self_label = {'unknown', }
 
-        output = f'\n{self.name} ({self_label})'
+        output = f'\n{self.name} ({str(self_label)[1:-1]})'
         for label, names in signals.items():
             output += f'\n  "{label}s":'
             for name in names:
@@ -204,7 +211,11 @@ class ID29EM(NSLS_EM):
         Updating the __str__ function to return 'name (label)'
         """
 
-        return f'{self.name} ({list(self._ophyd_labels_)[0]})'
+        try:
+            self_label = self._ophyd_labels_
+        except IndexError:
+            self_label = {'unknown', }
+        return f'{self.name} ({str(self_label)[1:-1]})'
 
 
 class Prosilica(SingleTrigger, ProsilicaDetector):
@@ -292,7 +303,11 @@ class Prosilica(SingleTrigger, ProsilicaDetector):
         Updating the __str__ function to return 'name (label)'
         """
 
-        return f'{self.name} ({list(self._ophyd_labels_)[0]})'
+        try:
+            self_label = self._ophyd_labels_
+        except IndexError:
+            self_label = {'unknown', }
+        return f'{self.name} ({str(self_label)[1:-1]})'
 
     cam = Component(ProsilicaCam, "cam1:", kind='normal')
 
@@ -407,7 +422,11 @@ class DeviceWithLocations(PrettyStr, Device):
             Updating the __str__ function to return 'name (label)'
             """
 
-            return f'{self.name} ({list(self._ophyd_labels_)[0]})'
+            try:
+                self_label = self._ophyd_labels_
+            except IndexError:
+                self_label = {'unknown', }
+            return f'{self.name} ({str(self_label)[1:-1]})'
 
         def get(self, **kwargs):
             """
