@@ -149,15 +149,43 @@ class PrettyStr():
         return output
 
 
-class ID29EM(NSLS_EM):
+class PrettyStrForSignal():
+    """
+        A class that provides a better string when using `print(PrettyStr)`
+
+        This class has a custom `__str__()` method that returns a formatted string
+        that includes the device name as well as child signals grouped by the
+        `signal._ophyd_labels_` list.
+
+        Parameters
+        ----------
+        None
+
+        Methods
+        -------
+        __str__() :
+            Returns a formatted string indicating it's name and it's
+            `_ophyd_labels_`.
+        """
+
+    def __str__(self):
+        """
+        Updating the __str__ function to return 'name (label)'
+        """
+
+        try:
+            self_label = self._ophyd_labels_
+        except IndexError:
+            self_label = {'unknown', }
+        return f'{self.name} ({str(self_label)[1:-1]})'
+
+
+class ID29EM(PrettyStrForSignal,NSLS_EM):
     """
     A 29-ID specific version of the NSLS_EM quadEM device.
 
     The main difference between this and the ophyd standard is adjusting
-    the 'kind' of the signals to match what is required at 29-ID. It also adds
-    a `self.__str__()` method that matches that used for the `PrettyStr`
-    class. In this case however it does not include any child signals, as this
-    is the lowest level device that users are likely to interact with.
+    the 'kind' of the signals to match what is required at 29-ID.
 
     Parameters
     ----------
@@ -177,12 +205,10 @@ class ID29EM(NSLS_EM):
     Methods
     -------
     *methods : many
-        The methods of the parent `NSLS_EM` class.
+        The methods of the parent `NSLS_EM` and PrettyStrForSignals classes.
     __init__(*args, **kwargs) :
         Runs the parent `NSLS_EM` __init__() method and then updates the
         'kind' attribute on a few attributes.
-    __str__() :
-        Returns self.name (self._ophyd_labels_)
     """
     conf = Component(QuadEMPort, port_name='EM180', kind='config')
 
@@ -206,19 +232,8 @@ class ID29EM(NSLS_EM):
             elif hasattr(device, 'kind'):
                 device.kind = 'omitted'  # set signal to 'omitted'.
 
-    def __str__(self):
-        """
-        Updating the __str__ function to return 'name (label)'
-        """
 
-        try:
-            self_label = self._ophyd_labels_
-        except IndexError:
-            self_label = {'unknown', }
-        return f'{self.name} ({str(self_label)[1:-1]})'
-
-
-class Prosilica(SingleTrigger, ProsilicaDetector):
+class Prosilica(PrettyStrForSignal, SingleTrigger, ProsilicaDetector):
     """
     Adds the `cam1.array_data` attribute required when not image saving.
 
@@ -246,13 +261,11 @@ class Prosilica(SingleTrigger, ProsilicaDetector):
     Methods
     -------
     *methods : many
-        The methods of the parent `SingleTrigger` and `ProsilicaDetector`
-        classes.
+        The methods of the parent ``PrettyStrForSignal`, SingleTrigger` and
+        `ProsilicaDetector` classes.
     __init__(*args, **kwargs) :
         Runs the parent `ProsilicaDetector` __init__() method and then updates
         the 'kind' attribute on a few attributes.
-    __str__() :
-        Returns self.name (self._ophyd_labels_)
     """
 
     def __init__(self, *args, **kwargs):
@@ -298,16 +311,6 @@ class Prosilica(SingleTrigger, ProsilicaDetector):
         array_counter = ADComponent(EpicsSignal, 'ArrayCounter',
                                     kind='config', timeout=10)
 
-    def __str__(self):
-        """
-        Updating the __str__ function to return 'name (label)'
-        """
-
-        try:
-            self_label = self._ophyd_labels_
-        except IndexError:
-            self_label = {'unknown', }
-        return f'{self.name} ({str(self_label)[1:-1]})'
 
     cam = Component(ProsilicaCam, "cam1:", kind='normal')
 
@@ -366,7 +369,7 @@ class DeviceWithLocations(PrettyStr, Device):
         `_locations_data` attribute.
     """
 
-    class LocationSignal(Signal):
+    class LocationSignal(PrettyStrForSignal, Signal):
         """
         An InternalSignal class to be used for updating the 'location' signal
 
@@ -380,9 +383,6 @@ class DeviceWithLocations(PrettyStr, Device):
         `self.parent._locations_data`) that the parent is currently in. It also
         has a `self.available()` method that returns a list of pre-set
         'locations' that it can be set too.
-
-        It also has a self.__str__() method that returns 'name (label)' to match
-        the structure.
 
         NOTE: It is an inner class of DeviceWithLocations as it relies on the
         parent having attributes defined by DeviceWithLocations. It updates
@@ -406,8 +406,6 @@ class DeviceWithLocations(PrettyStr, Device):
         -------
         *methods : many
             The methods of the parent `Signal` class.
-        __str__() :
-            Returns self.name (self._ophyd_labels_)
         get() :
             Returns a list of locations the parent device is currently 'in'.
         set(location) :
@@ -416,17 +414,6 @@ class DeviceWithLocations(PrettyStr, Device):
             returns a list of possible 'locations' that the parent device can
             be set to.
         """
-
-        def __str__(self):
-            """
-            Updating the __str__ function to return 'name (label)'
-            """
-
-            try:
-                self_label = self._ophyd_labels_
-            except IndexError:
-                self_label = {'unknown', }
-            return f'{self.name} ({str(self_label)[1:-1]})'
 
         def get(self, **kwargs):
             """
