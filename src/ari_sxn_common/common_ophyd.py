@@ -9,99 +9,9 @@ from ophyd.signal import Signal, EpicsSignalRO, EpicsSignal
 import re
 
 
-class ID29EpicsMotor(EpicsMotor):
+class PrettyStrForDevices():
     """
-    Updates ophyd.EpicsMotor so that print(EpicsMotor) returns 'name (label)'
-
-    This is an `ophyd.EpicsMotor` that adds some 29ID specific kind values and
-    a custom `__str__()` method that matches that used for the `PrettyStr`
-    class. In this case however it does not include any child signals, as this
-    is the lowest level device that users are likely to interact with.
-
-    Parameters
-    ----------
-    *args : arguments
-        The arguments passed to the parent 'EpicsMotor' class
-    **kwargs : keyword arguments
-        The keyword arguments passed to the parent 'EpicsMotor' class
-
-    Attributes
-    ----------
-    *attrs : many
-        The attributes of the parent `EpicsMotor` class.
-
-    Methods
-    -------
-    *methods : many
-        The methods of the parent `EpicsMotor` class.
-    __init__(*args, **kwargs) :
-        Runs the parent `EpicsMotor` __init__() method and then updates the
-        'kind' attribute on a few attributes.
-    __str__() :
-        Returns self.name (self._ophyd_labels_)
-    """
-    def __init__(self, *args, **kwargs):
-        """
-        Modifies the kind of some signals to match the 29ID requirements
-        """
-        super().__init__(*args, **kwargs)
-        self.user_setpoint.kind = 'normal'
-        self.user_readback.kind = 'hinted'
-
-    def __str__(self):
-        """
-        Updating the __str__ function to return the device 'name (label)'.
-        """
-        try:
-            self_label = self._ophyd_labels_
-        except IndexError:
-            self_label = {'unknown', }
-        return f'{self.name} ({str(self_label)[1:-1]})'
-
-
-class ID29EpicsSignalRO(EpicsSignalRO):
-    """
-    Updates ophyd.EpicsSignalRO so print(EpicsSignalRO) returns 'name (label)'
-
-    This is an `ophyd.EpicsSignalRO` that adds a custom `__str__()` method that
-    matches that used for the `PrettyStr` class. In this case however it does
-    not include any child signals, as this is the lowest level device that users
-    are likely to interact with.
-
-    Parameters
-    ----------
-    *args : arguments
-        The arguments passed to the parent `EpicsSignalRO` class
-    **kwargs : keyword arguments
-        The keyword arguments passed to the parent 'EpicsSignalRO' class
-
-    Attributes
-    ----------
-    *attrs : many
-        The attributes of the parent `EpicsSignalRO` class.
-
-    Methods
-    -------
-    *methods : many
-        The methods of the parent `EpicsSignalRO` class.
-    __str__() :
-        Returns self.name (self._ophyd_labels_)
-    """
-    def __str__(self):
-        """
-        Updating the __str__ function to return the device 'name (label)'.
-        """
-
-        try:
-            self_label = self._ophyd_labels_
-        except IndexError:
-            self_label = {'unknown', }
-        return f'{self.name} ({str(self_label)[1:-1]})'
-
-
-class PrettyStr():
-    """
-    A class that provides a better string when using `print(PrettyStr)`
+    A class that provides a better string when using `print(obj)`
 
     This class has a custom `__str__()` method that returns a formatted string
     that includes the device name as well as child signals grouped by the
@@ -156,8 +66,8 @@ class PrettyStrForSignal():
         This class has a custom `__str__()` method that returns a formatted
         string that includes the device name as well as the
         `signal._ophyd_labels_` list. It is designed for use with the
-        `PrettyStr` class but on hte lowest level signals that should be
-        accessed by users.
+        `PrettyStrForDevices` class but on hte lowest level signals that should
+        be accessed by users.
 
         Parameters
         ----------
@@ -180,6 +90,64 @@ class PrettyStrForSignal():
         except IndexError:
             self_label = {'unknown', }
         return f'{self.name} ({str(self_label)[1:-1]})'
+
+
+class ID29EpicsMotor(PrettyStrForSignal, EpicsMotor):
+    """
+    Updates ophyd.EpicsMotor with a str method from PrettyStrForSignal
+
+    Parameters
+    ----------
+    *args : arguments
+        The arguments passed to the parent 'EpicsMotor' class
+    **kwargs : keyword arguments
+        The keyword arguments passed to the parent 'EpicsMotor' class
+
+    Attributes
+    ----------
+    *attrs : many
+        The attributes of the parent `EpicsMotor` class.
+
+    Methods
+    -------
+    *methods : many
+        The methods of the parent `PrettyStrForSignal` and `EpicsMotor`
+        classes.
+    __init__(*args, **kwargs) :
+        Runs the parent `EpicsMotor` __init__() method and then updates the
+        'kind' attribute on a few attributes.
+    """
+    def __init__(self, *args, **kwargs):
+        """
+        Modifies the kind of some signals to match the 29ID requirements
+        """
+        super().__init__(*args, **kwargs)
+        self.user_setpoint.kind = 'normal'
+        self.user_readback.kind = 'hinted'
+
+
+class ID29EpicsSignalRO(PrettyStrForSignal, EpicsSignalRO):
+    """
+    Updates ophyd.EpicsSignalRO with a str method from PrettyStrForSignal
+
+    Parameters
+    ----------
+    *args : arguments
+        The arguments passed to the parent `EpicsSignalRO` class
+    **kwargs : keyword arguments
+        The keyword arguments passed to the parent 'EpicsSignalRO' class
+
+    Attributes
+    ----------
+    *attrs : many
+        The attributes of the parent `EpicsSignalRO` class.
+
+    Methods
+    -------
+    *methods : many
+        The methods of the parent `PrettyStrForSignal` and `EpicsSignalRO`
+        classes.
+    """
 
 
 class ID29EM(PrettyStrForSignal,NSLS_EM):
@@ -207,7 +175,7 @@ class ID29EM(PrettyStrForSignal,NSLS_EM):
     Methods
     -------
     *methods : many
-        The methods of the parent `NSLS_EM` and PrettyStrForSignals classes.
+        The methods of the parent `NSLS_EM` and PrettyStrForSignal classes.
     __init__(*args, **kwargs) :
         Runs the parent `NSLS_EM` __init__() method and then updates the
         'kind' attribute on a few attributes.
@@ -317,7 +285,7 @@ class Prosilica(PrettyStrForSignal, SingleTrigger, ProsilicaDetector):
     cam = Component(ProsilicaCam, "cam1:", kind='normal')
 
 
-class DeviceWithLocations(PrettyStr, Device):
+class DeviceWithLocations(PrettyStrForDevices, Device):
     """
     A child of ophyd.Device that adds a 'location' functionality.
 
@@ -330,8 +298,8 @@ class DeviceWithLocations(PrettyStr, Device):
         * A list of available locations is returned from
           `self.locations.available()`
 
-    It also includes the new `self.__str__()` method defined in the `PrettyStr`
-    class.
+    It also includes the new `self.__str__()` method defined in the
+    `PrettyStrForDevices` class.
 
     Parameters
     ----------
@@ -354,7 +322,7 @@ class DeviceWithLocations(PrettyStr, Device):
     Attributes
     ----------
     *attrs : many
-        The attributes of the parent `Device` and `PrettyStr` classes.
+        The attributes of the parent `Device` and `PrettyStrForDevices` classes.
     _locations_data : Dict
         A dictionary containing the information on the locations as passed into
         the self.__init__() method via locations_data.
@@ -365,7 +333,7 @@ class DeviceWithLocations(PrettyStr, Device):
     Methods
     -------
     *methods : many
-        The methods of the parent `Device` and `PrettyStr` class.
+        The methods of the parent `Device` and `PrettyStrForDevices` class.
     __init__(*args, **kwargs) :
         Runs the parent `Device` __init__() method and then adds the
         `_locations_data` attribute.
