@@ -12,6 +12,13 @@ class M1(DeviceWithLocations):
     motors, detectors and vacuum signals for these. It is designed to
     provide an intuitive, tab-to-complete based, interface to find all
     the components associated with the M1 mirror.
+
+    Parameters
+    ----------
+    *args : arguments
+        The arguments passed to the parent 'DeviceWithLocations' class
+    **kwargs : keyword arguments
+        The keyword arguments passed to the parent 'DeviceWithLocations' class
     """
     def __init__(self, *args, **kwargs):
         """
