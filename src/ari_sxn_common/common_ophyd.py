@@ -19,7 +19,7 @@ class ID29EpicsMotor(EpicsMotor):
         """
         super().__init__(*args, **kwargs)
         self.user_setpoint.kind = 'normal'
-        self.user_readback.kind = 'normal'
+        self.user_readback.kind = 'hinted'
 
     def __str__(self):
         """
@@ -90,8 +90,7 @@ class ID29EM(NSLS_EM):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Remove acquire from staging due to a problem with 'self.unstage()'.
-        self.stage_sigs.pop('acquire')
+
         # Generate a list of signals and sub-devices for this qem
         signals_list = [(signal.dotted_name, signal.item)
                         for signal in self.walk_signals()
@@ -151,7 +150,6 @@ class Prosilica(SingleTrigger, ProsilicaDetector):
 
 
 class DeviceWithLocations(PrettyStr, Device):
-    # noinspection GrazieInspection
     """
         A child of ophyd.Device that adds a 'location' functionality.
 
