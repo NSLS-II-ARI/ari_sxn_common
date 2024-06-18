@@ -651,6 +651,7 @@ class Diagnostic(DeviceWithLocations):
         # trigger the child components that need it
         camera_status = self.camera.trigger()
         currents_status = self.currents.trigger()
+        # Call the parent trigger
         super_status = super().trigger()
 
         output_status = camera_status & currents_status & super_status
@@ -669,8 +670,8 @@ class BaffleSlit(DeviceWithLocations):
     have a 'set_location' method that allows the user to quickly move to the
     locations defined by the 'locations' argument, this could be used to quickly
     move the blades to the pre-determined 'operation' position. The 'location'
-     attribute is a read-only ophyd signal that returns a list of 'locations'
-     that the device is currently 'in'.
+    attribute is a read-only ophyd signal that returns a list of 'locations'
+    that the device is currently 'in'.
 
     Parameters
     ----------
