@@ -47,6 +47,8 @@ class M1(DeviceWithLocations):
 
     Methods
     -------
+    *methods : many
+        The methods of the parent `DeviceWithLocations` class.
     trigger() :
         Runs the trigger methods from the parent `DeviceWithLocations` class,
         the child `BaffleSlit` class, and the child `Diagnostic` class and
