@@ -85,7 +85,6 @@ class M1(DeviceWithLocations):
         baffle_status = self.slits.trigger()
         diag_status = self.diag.trigger()
 
-        # Commented out the diag_status here while I resolve the timeout issue
-        output_status = baffle_status & super_status # & diag_status
+        output_status = baffle_status & super_status & diag_status
 
         return output_status

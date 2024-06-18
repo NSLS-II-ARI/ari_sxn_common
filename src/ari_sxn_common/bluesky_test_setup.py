@@ -5,6 +5,7 @@ from bluesky.callbacks.best_effort import BestEffortCallback
 from bluesky.plans import count, scan, grid_scan
 from bluesky.utils import ProgressBarManager
 from databroker import Broker
+from ophyd.signal import EpicsSignalBase
 
 # Create run engine
 RE = RunEngine({})
@@ -16,6 +17,8 @@ db = Broker.named('temp')
 RE.subscribe(db.insert)
 # Add Progress bars
 RE.waiting_hook = ProgressBarManager()
+
+EpicsSignalBase.set_defaults(timeout=10, connection_timeout=10)
 
 # Setup the m1 mirror ophyd object
 m1_locations_data = {'measure': {'diag.locations': ('Out', None),
