@@ -11,26 +11,35 @@ import re
 
 class PrettyStrForDevices():
     """
-    A class that provides a better string when using `print(obj)`
+    A class that provides a better print and tab-to-complete functionality`
 
     This class has a custom `__str__()` method that returns a formatted string
     that includes the device name as well as child signals grouped by the
     `signal._ophyd_labels_` list.
 
-    Parameters
-    ----------
-    None
+    This class also has a custom `__dir__()` method that returns a list of
+    attribute names giving the required options when using tab-to-complete. This
+    list contains all of the signals found in `self._signals.keys()` as well as
+    the `read()` method.
 
     Methods
     -------
     __str__() :
         Returns a formatted string indicating it's name and all of the child
         signals grouped by their `_ophyd_labels_`.
+    __dir__() :
+        Returns a list of attribute name strings to be used to define what
+        options are available when doing tab-to-complete.
     """
     def __str__(self):
         """
         Updates the __str__() method to provide the formatted string described
         in the class definition.
+
+        Returns
+        -------
+        output : str
+            A formatted string that should be printed when using print(self)
         """
         signals = defaultdict(list)
         if hasattr(self, '_signals'):
@@ -58,31 +67,56 @@ class PrettyStrForDevices():
 
         return output
 
+    def __dir__(self):
+        """
+        Used to limit the number of options when using tab to complete.
+
+        This method is used to give the list of options when using pythons tab
+        to complete process. It gives all of the signal attributes (motors and
+        detectors) as well as the 'read' method.
+
+        Returns
+        -------
+        attribute_list : list[str]
+            A list of attribute names to be included when using tab-to-complete
+        """
+        attribute_list = ['read']
+        attribute_list.extend([key for key in self._signals.keys()])
+
+        return attribute_list
+
 
 class PrettyStrForSignal():
     """
-        A class that provides a better string when using `print(PrettyStr)`
+    A class that provides a better string when using `print(PrettyStr)`
 
-        This class has a custom `__str__()` method that returns a formatted
-        string that includes the device name as well as the
-        `signal._ophyd_labels_` list. It is designed for use with the
-        `PrettyStrForDevices` class but on hte lowest level signals that should
-        be accessed by users.
+    This class has a custom `__str__()` method that returns a formatted string
+    that includes the device name as well as the `signal._ophyd_labels_` list.
+    It is designed for use with the `PrettyStrForDevices` class but on the
+    lowest level signals that should be accessed by users.
 
-        Parameters
-        ----------
-        None
+    This class also has a custom `__dir__()` method that returns a list of
+    attribute names giving the required options when using tab-to-complete. This
+    list contains only the `read()` method.
 
-        Methods
-        -------
-        __str__() :
-            Returns a formatted string indicating it's name and it's
-            `_ophyd_labels_`.
-        """
+    Methods
+    -------
+    __str__() :
+        Returns a formatted string indicating it's name and it's
+        `_ophyd_labels_`.
+    __dir__() :
+        Returns a list of attribute name strings to be used to define what
+        options are available when doing tab-to-complete.
+    """
 
     def __str__(self):
         """
         Updating the __str__ function to return 'name (label)'
+
+        Returns
+        -------
+        output : str
+            A formatted string that should be printed when using print(self)
         """
 
         try:
@@ -90,6 +124,22 @@ class PrettyStrForSignal():
         except IndexError:
             self_label = {'unknown', }
         return f'{self.name} ({str(self_label)[1:-1]})'
+
+    def __dir__(self):
+        """
+        Used to limit the number of options when using tab to complete.
+
+        This method is used to give the list of options when using pythons tab
+        to complete process. It gives only the 'read' method.
+
+        Returns
+        -------
+        attribute_list : list[str]
+            A list of attribute names to be included when using tab-to-complete
+        """
+        attribute_list = ['read']
+
+        return attribute_list
 
 
 class ID29EpicsMotor(PrettyStrForSignal, EpicsMotor):
