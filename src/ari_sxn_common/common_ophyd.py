@@ -324,8 +324,8 @@ class Prosilica(PrettyStrForSignal, SingleTrigger, ProsilicaDetector):
         *methods : many
             The methods of the parent `ProsilicaDetectorCam` class.
         __init__(*args, **kwargs) :
-            Runs the parent `ProsilicaDetector` __init__() method and then updates
-            the 'kind' attribute on a few attributes.
+            Runs the parent `ProsilicaDetector` __init__() method and then
+            updates the 'kind' attribute on a few attributes.
         """
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
