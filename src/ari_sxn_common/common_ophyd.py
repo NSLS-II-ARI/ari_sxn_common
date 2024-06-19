@@ -9,7 +9,8 @@ from ophyd.signal import Signal, EpicsSignalRO, EpicsSignal
 import re
 
 
-class PrettyStrForDevices():
+# noinspection PyUnresolvedReferences,PyProtectedMember
+class PrettyStrForDevices:
     """
     A class that provides a better print and tab-to-complete functionality`
 
@@ -50,8 +51,8 @@ class PrettyStrForDevices():
                     labels = {'unknown', }
                 for label in labels:
                     signals[label].append(
-                        getattr(self, signal).__str__().replace(f'{self.name}_',
-                                                            ''))
+                        getattr(self, signal).__str__().replace(
+                            f'{self.name}_', ''))
 
         try:
             self_label = self._ophyd_labels_
@@ -86,7 +87,8 @@ class PrettyStrForDevices():
         return attribute_list
 
 
-class PrettyStrForSignal():
+# noinspection PyUnresolvedReferences
+class PrettyStrForSignal:
     """
     A class that provides a better string when using `print(PrettyStr)`
 
@@ -142,6 +144,7 @@ class PrettyStrForSignal():
         return attribute_list
 
 
+# noinspection PyUnresolvedReferences
 class ID29EpicsMotor(PrettyStrForSignal, EpicsMotor):
     """
     Updates ophyd.EpicsMotor with a str method from PrettyStrForSignal
@@ -176,6 +179,7 @@ class ID29EpicsMotor(PrettyStrForSignal, EpicsMotor):
         self.user_readback.kind = 'hinted'
 
 
+# noinspection PyUnresolvedReferences
 class ID29EpicsSignalRO(PrettyStrForSignal, EpicsSignalRO):
     """
     Updates ophyd.EpicsSignalRO with a str method from PrettyStrForSignal
@@ -200,7 +204,7 @@ class ID29EpicsSignalRO(PrettyStrForSignal, EpicsSignalRO):
     """
 
 
-class ID29EM(PrettyStrForSignal,NSLS_EM):
+class ID29EM(PrettyStrForSignal, NSLS_EM):
     """
     A 29-ID specific version of the NSLS_EM quadEM device.
 
@@ -331,7 +335,6 @@ class Prosilica(PrettyStrForSignal, SingleTrigger, ProsilicaDetector):
         array_counter = ADComponent(EpicsSignal, 'ArrayCounter',
                                     kind='config', timeout=10)
 
-
     cam = Component(ProsilicaCam, "cam1:", kind='normal')
 
 
@@ -389,6 +392,7 @@ class DeviceWithLocations(PrettyStrForDevices, Device):
         `_locations_data` attribute.
     """
 
+    # noinspection PyUnresolvedReferences
     class LocationSignal(PrettyStrForSignal, Signal):
         """
         An InternalSignal class to be used for updating the 'location' signal
