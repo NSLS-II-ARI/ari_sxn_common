@@ -23,7 +23,7 @@ EpicsSignalBase.set_defaults(timeout=10, connection_timeout=10)
 
 # Create some aliases which might help new users
 move = mv
-move_relative = mvr
+rel_move = mvr
 
 # Setup the m1 mirror ophyd object
 m1_locations_data = {'measure': {'diag.locations': ('Out', None),
