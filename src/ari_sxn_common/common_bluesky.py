@@ -38,16 +38,26 @@ class PlanCollectorSub:
     ----------
     methods_to_import : {str: func}
         A dictionary mapping method names to methods for the sub class.
+    name : str
+        The name of the sub-class, usually matches this instances attribute name
+    parent : PlanCollector
+        The plan collector object that is this instances parent.
+
     Attributes
     ----------
     methods : many
         All of the methods specified in methods_to_import
+    name : str
+        The name of this instance
+    parent : PlanCollector
+        The plan collector object that is this instances parent.
     """
-    def __init__(self, methods_to_import, name):
+    def __init__(self, methods_to_import, name, parent):
         for plan_name, function in methods_to_import.items():
             setattr(self, plan_name, function)
 
         self.name = name
+        self.parent = parent
 
     def __str__(self):
         """
@@ -61,7 +71,7 @@ class PlanCollectorSub:
         output: str
             A formatted string that should be printed when using print(self)
         """
-        output = f'\n{self.name}:'
+        output = f'\n{self.parent.name}.{self.name}:'
         for name in self.__dict__.keys():
             if name != 'name':
                 output += f'\n    {name}'
@@ -102,13 +112,16 @@ class PlanCollector:
         Note: only the first alias above will be added to avoid to many options,
         all aliases are in this dict as the same dict is used to populate the
         global namespace versions of these.
-
+     name : str
+        The name of the sub-class, usually matches this instances attribute name
 
     Attributes
     ----------
     built-ins : many
         All of the built-in plans from `bluesky.plans` (but not aliases) as
         given in plans_to_import and plan_stubs_to_import.
+     name : str
+        The name of the sub-class, usually matches this instances attribute name
 
     """
     def __init__(self, plans_to_import, plan_stubs_to_import, name):
@@ -156,7 +169,7 @@ class PlanCollector:
 
         # add the relative scan subclass
         self.relative = PlanCollectorSub(relative_plans_to_import,
-                                         name='relative')
+                                         name='relative', parent=self)
 
     def __str__(self):
         """
@@ -174,7 +187,9 @@ class PlanCollector:
         for name, plan in self.__dict__.items():
             if name != 'name':
                 if plan.__dict__:
-                    output += f'\n    {plan.__str__().replace('\n', '\n    ')}'
+                    output += f'\n    {plan.__str__().replace(
+                        '\n', '\n    ').replace(
+                        f'{self.name}.', '')}'
                 else:
                     output += f'\n    {name}'
 
