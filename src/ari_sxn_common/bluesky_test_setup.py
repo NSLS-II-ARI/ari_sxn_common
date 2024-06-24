@@ -41,4 +41,5 @@ m1 = M1('ARI_M1:', name='m1', locations_data=m1_locations_data,
 
 plans = common_bluesky.PlanCollector(
     plans_to_import=common_bluesky._plans_to_import,
-    plan_stubs_to_import=common_bluesky._plan_stubs_to_import)
+    plan_stubs_to_import=common_bluesky._plan_stubs_to_import,
+    name='plans')

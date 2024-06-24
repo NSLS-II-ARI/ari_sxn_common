@@ -27,9 +27,12 @@ _plans_to_import = {'count': ['count'],
                                           'rel_spiral_square']}
 
 
-class PlanCollectorSubClass:
+class PlanCollectorSub:
     """
     A class used to initialize child attributes with methods
+
+    This class is to be used with the `PlanCollector` class when you want to add
+    an extra level of plans that contain no child collections, only child plans.
 
     Parameters
     ----------
@@ -40,9 +43,30 @@ class PlanCollectorSubClass:
     methods : many
         All of the methods specified in methods_to_import
     """
-    def __init__(self, methods_to_import):
-        for name, function in methods_to_import.items():
-            setattr(self, name, function)
+    def __init__(self, methods_to_import, name):
+        for plan_name, function in methods_to_import.items():
+            setattr(self, plan_name, function)
+
+        self.name = name
+
+    def __str__(self):
+        """
+        A custom __str__ method that prints a formatted list of plans.
+
+        This method is designed to print a formatted list of plans associated  with
+        this sub-class that has no lower subclasses.
+
+        Returns
+        -------
+        output: str
+            A formatted string that should be printed when using print(self)
+        """
+        output = f'\n{self.name}:'
+        for name in self.__dict__.keys():
+            if name != 'name':
+                output += f'\n    {name}'
+
+        return output
 
 
 class PlanCollector:
@@ -87,7 +111,7 @@ class PlanCollector:
         given in plans_to_import and plan_stubs_to_import.
 
     """
-    def __init__(self, plans_to_import, plan_stubs_to_import):
+    def __init__(self, plans_to_import, plan_stubs_to_import, name):
         """
         Initializes the methods from plans_to_import and sub_plans_to_import
 
@@ -111,22 +135,47 @@ class PlanCollector:
             options, all aliases are in this dict as the same dict is used to
             populate the global namespace versions of these.
         """
+        self.name = name
         # create the plan methods
         relative_plans_to_import = {}
         for plan, aliases in plans_to_import.items():
             if plan.startswith('rel_'):
-                name = aliases[0].split('_', 1)[1]
-                relative_plans_to_import[name] = getattr(plans, plan)
+                plan_name = aliases[0].split('_', 1)[1]
+                relative_plans_to_import[plan_name] = getattr(plans, plan)
             else:
                 setattr(self, aliases[0], getattr(plans, plan))
 
         # create the plan_stub methods
         for plan_stub, aliases in plan_stubs_to_import.items():
-            if plan_stub.startswith('rel_'):
-                name = aliases[0].split('_', 1)[1]
-                relative_plans_to_import[name] = getattr(plan_stubs, plan_stub)
+            if plan_stub.startswith('rel_') or plan_stub == 'mvr':
+                plan_stub_name = aliases[0].split('_', 1)[1]
+                relative_plans_to_import[plan_stub_name] = getattr(plan_stubs,
+                                                                   plan_stub)
             else:
                 setattr(self, aliases[0], getattr(plan_stubs, plan_stub))
 
         # add the relative scan subclass
-        self.relative = PlanCollectorSubClass(relative_plans_to_import)
+        self.relative = PlanCollectorSub(relative_plans_to_import,
+                                         name='relative')
+
+    def __str__(self):
+        """
+        A custom __str__ method that prints a formatted list of plans.
+
+        This method is designed to print a formatted list of plans and any
+        sub-classes that have plans.
+
+        Returns
+        -------
+        output: str
+            A formatted string that should be printed when using print(self)
+        """
+        output = f'\n{self.name}:'
+        for name, plan in self.__dict__.items():
+            if name != 'name':
+                if plan.__dict__:
+                    output += f'\n    {plan.__str__().replace('\n', '\n    ')}'
+                else:
+                    output += f'\n    {name}'
+
+        return output
