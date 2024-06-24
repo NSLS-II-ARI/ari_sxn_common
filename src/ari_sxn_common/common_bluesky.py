@@ -73,7 +73,7 @@ class PlanCollectorSub:
         """
         output = f'\n{self.parent.name}.{self.name}:'
         for name in self.__dict__.keys():
-            if name != 'name':
+            if name not in ['name', 'parent']:
                 output += f'\n    {name}'
 
         return output
@@ -185,7 +185,7 @@ class PlanCollector:
         """
         output = f'\n{self.name}:'
         for name, plan in self.__dict__.items():
-            if name != 'name':
+            if name not in ['name','parent']:
                 if plan.__dict__:
                     output += f'\n    {plan.__str__().replace(
                         '\n', '\n    ').replace(
