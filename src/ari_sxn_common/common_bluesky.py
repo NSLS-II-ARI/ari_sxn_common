@@ -45,12 +45,19 @@ class PlanCollectorSub:
 
     Attributes
     ----------
-    methods : many
-        All of the methods specified in methods_to_import
     name : str
         The name of this instance
     parent : PlanCollector
         The plan collector object that is this instances parent.
+
+    Methods
+    _______
+    methods : many
+        All of the methods specified in methods_to_import
+    __str__() :
+        Returns a user friendly formatted string showing the structure of the
+        instance including all of the methods from methods_to_import but not
+        the 'name' or 'parent' attributes.
     """
     def __init__(self, methods_to_import, name, parent):
         for plan_name, function in methods_to_import.items():
@@ -123,6 +130,16 @@ class PlanCollector:
      name : str
         The name of the sub-class, usually matches this instances attribute name
 
+    Methods
+    _______
+    methods : many
+        All of the built-in plans from `bluesky.plans` (but not aliases) as
+        given in plans_to_import and plan_stubs_to_import.
+    __str__() :
+        Returns a user friendly formatted string showing the structure of the
+        instance including all of the methods from plans_to_import,
+        plan_stubs_to_import and any PlanCollectorSub attributes but not the
+        'name' attribute.
     """
     def __init__(self, plans_to_import, plan_stubs_to_import, name):
         """
