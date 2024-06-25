@@ -56,7 +56,7 @@ class PlanCollectorSub:
         for plan_name, function in methods_to_import.items():
             setattr(self, plan_name, function)
 
-        self.name = f'{parent.name}.{name}'
+        self.name = f'{parent.name}_{name}'
         self.parent = parent
 
     def __str__(self):
@@ -149,14 +149,8 @@ class PlanCollector:
             populate the global namespace versions of these.
         """
         self.name = name
-        # create the plan methods
-        relative_plans_to_import = {}
-        for plan, aliases in plans_to_import.items():
-            if plan.startswith('rel_'):
-                plan_name = aliases[0].split('_', 1)[1]
-                relative_plans_to_import[plan_name] = getattr(plans, plan)
-            else:
-                setattr(self, aliases[0], getattr(plans, plan))
+
+        relative_plans_to_import = {}  # used to separate out relative plans
 
         # create the plan_stub methods
         for plan_stub, aliases in plan_stubs_to_import.items():
@@ -166,6 +160,14 @@ class PlanCollector:
                                                                    plan_stub)
             else:
                 setattr(self, aliases[0], getattr(plan_stubs, plan_stub))
+
+        # create the plan methods
+        for plan, aliases in plans_to_import.items():
+            if plan.startswith('rel_'):
+                plan_name = aliases[0].split('_', 1)[1]
+                relative_plans_to_import[plan_name] = getattr(plans, plan)
+            else:
+                setattr(self, aliases[0], getattr(plans, plan))
 
         # add the relative scan subclass
         self.relative = PlanCollectorSub(relative_plans_to_import,
@@ -185,11 +187,11 @@ class PlanCollector:
         """
         output = f'\n{self.name}:'
         for name, plan in self.__dict__.items():
-            if name not in ['name','parent']:
+            if name not in ['name', 'parent']:
                 if plan.__dict__:
                     output += f'\n    {plan.__str__().replace(
                         '\n', '\n    ').replace(
-                        f'{self.name}.', '')}'
+                        f'{self.name}_', '')}'
                 else:
                     output += f'\n    {name}'
 
