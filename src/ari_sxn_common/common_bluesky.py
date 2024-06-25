@@ -29,7 +29,7 @@ _plans_to_import = {'count': ['count'],
 
 class PlanCollectorSub:
     """
-    A class used to initialize child attributes with methods
+    A class used to initialize child attributes with methods for PlanCollector's
 
     This class is to be used with the `PlanCollector` class when you want to add
     an extra level of plans that contain no child collections, only child plans.
@@ -56,7 +56,7 @@ class PlanCollectorSub:
         for plan_name, function in methods_to_import.items():
             setattr(self, plan_name, function)
 
-        self.name = name
+        self.name = f'{parent.name}.{name}'
         self.parent = parent
 
     def __str__(self):
@@ -71,7 +71,7 @@ class PlanCollectorSub:
         output: str
             A formatted string that should be printed when using print(self)
         """
-        output = f'\n{self.parent.name}.{self.name}:'
+        output = f'\n{self.name}:'
         for name in self.__dict__.keys():
             if name not in ['name', 'parent']:
                 output += f'\n    {name}'
