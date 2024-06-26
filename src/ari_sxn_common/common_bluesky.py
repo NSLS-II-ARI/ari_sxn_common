@@ -58,6 +58,9 @@ class PlanCollectorSub:
         Returns a user friendly formatted string showing the structure of the
         instance including all of the methods from methods_to_import but not
         the 'name' or 'parent' attributes.
+    __dir__() :
+        Returns a list of attribute name strings to be used to define what
+        options are available when doing tab-to-complete.
     """
     def __init__(self, methods_to_import, name, parent):
         for plan_name, function in methods_to_import.items():
@@ -84,6 +87,25 @@ class PlanCollectorSub:
                 output += f'\n    {name}'
 
         return output
+
+    def __dir__(self):
+        """
+        Used to limit the number of options when using tab to complete.
+
+        This method is used to give the list of options when using pythons tab
+        to complete process. It gives all of the method attributes but not the
+        'name' and 'parent' attributes.
+
+        Returns
+        -------
+        attribute_list : list[str]
+            A list of attribute names to be included when using tab-to-complete
+        """
+        attribute_list = [plan for plan in self.__dict__.keys()
+                          if plan not in ['name', 'parent']]
+
+        return attribute_list
+
 
 
 class PlanCollector:
@@ -140,6 +162,9 @@ class PlanCollector:
         instance including all of the methods from plans_to_import,
         plan_stubs_to_import and any PlanCollectorSub attributes but not the
         'name' attribute.
+    __dir__() :
+        Returns a list of attribute name strings to be used to define what
+        options are available when doing tab-to-complete.
     """
     def __init__(self, plans_to_import, plan_stubs_to_import, name):
         """
@@ -213,3 +238,21 @@ class PlanCollector:
                     output += f'\n    {name}'
 
         return output
+
+    def __dir__(self):
+        """
+        Used to limit the number of options when using tab to complete.
+
+        This method is used to give the list of options when using pythons tab
+        to complete process. It gives all of the method attributes and any
+        PlanCollectorSun attributes but not the 'name' attribute.
+
+        Returns
+        -------
+        attribute_list : list[str]
+            A list of attribute names to be included when using tab-to-complete
+        """
+        attribute_list = [plan for plan in self.__dict__.keys()
+                          if plan not in ['name']]
+
+        return attribute_list
