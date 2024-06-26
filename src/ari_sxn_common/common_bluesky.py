@@ -82,9 +82,13 @@ class PlanCollectorSub:
             A formatted string that should be printed when using print(self)
         """
         output = f'\n{self.name}:'
-        for name in self.__dict__.keys():
+        for name, plan in self.__dict__.items():
             if name not in ['name', 'parent']:
-                output += f'\n    {name}'
+                description = plan.__doc__.split('\n')[0].strip() \
+                    if plan.__doc__.split('\n')[0] else (
+                    plan.__doc__.split('\n')[1].strip())
+
+                output += f'\n    {name}:    {description}'
 
         return output
 
@@ -230,12 +234,16 @@ class PlanCollector:
         output = f'\n{self.name}:'
         for name, plan in self.__dict__.items():
             if name not in ['name', 'parent']:
-                if plan.__dict__:
+                if plan.__dict__:  #if plan has attributes
                     output += f'\n    {plan.__str__().replace(
                         '\n', '\n    ').replace(
                         f'{self.name}_', '')}'
                 else:
-                    output += f'\n    {name}'
+                    description = plan.__doc__.split('\n')[0].strip() \
+                        if plan.__doc__.split('\n')[0] else (
+                        plan.__doc__.split('\n')[1].strip())
+
+                    output += f'\n    {name}:    {description}'
 
         return output
 
