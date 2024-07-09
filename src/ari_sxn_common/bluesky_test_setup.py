@@ -2,7 +2,8 @@
 from ari_ophyd import M1
 from bluesky import RunEngine
 from bluesky.callbacks.best_effort import BestEffortCallback
-from bluesky.plans import count, scan, grid_scan
+from bluesky.plans import *
+from bluesky.plan_stubs import mv, mvr
 from bluesky.utils import ProgressBarManager
 from databroker import Broker
 from ophyd.signal import EpicsSignalBase
@@ -19,6 +20,11 @@ RE.subscribe(db.insert)
 RE.waiting_hook = ProgressBarManager()
 
 EpicsSignalBase.set_defaults(timeout=10, connection_timeout=10)
+
+# Create some aliases which might help new users
+move = mv
+rel_move = mvr
+relative_move = mvr
 
 # Setup the m1 mirror ophyd object
 m1_locations_data = {'measure': {'diag.locations': ('Out', None),
