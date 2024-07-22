@@ -2,9 +2,10 @@
 from ari_ophyd import M1
 from bluesky import RunEngine
 from bluesky.callbacks.best_effort import BestEffortCallback
-from bluesky.plans import *
-from bluesky.plan_stubs import mv, mvr
+from bluesky import plans as plans
+from bluesky import plan_stubs as plan_stubs
 from bluesky.utils import ProgressBarManager
+import common_bluesky
 from databroker import Broker
 from ophyd.signal import EpicsSignalBase
 
@@ -21,10 +22,14 @@ RE.waiting_hook = ProgressBarManager()
 
 EpicsSignalBase.set_defaults(timeout=10, connection_timeout=10)
 
-# Create some aliases which might help new users
-move = mv
-rel_move = mvr
-relative_move = mvr
+# create the plan_stub objects
+for plan_stub, aliases in common_bluesky._plan_stubs_to_import.items():
+    for alias in aliases:
+        globals()[alias] = getattr(plan_stubs, plan_stub)
+# create the plan objects
+for plan, aliases in common_bluesky._plans_to_import.items():
+    for alias in aliases:
+        globals()[alias] = getattr(plans, plan)
 
 # Setup the m1 mirror ophyd object
 m1_locations_data = {'measure': {'diag.locations': ('Out', None),
@@ -33,3 +38,8 @@ m1_locations_data = {'measure': {'diag.locations': ('Out', None),
                              'slits.locations': ('nominal', None)}}
 m1 = M1('ARI_M1:', name='m1', locations_data=m1_locations_data,
         labels=('device',))
+
+plans = common_bluesky.PlanCollector(
+    plans_to_import=common_bluesky._plans_to_import,
+    plan_stubs_to_import=common_bluesky._plan_stubs_to_import,
+    name='plans')
