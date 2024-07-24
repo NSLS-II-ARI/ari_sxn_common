@@ -1,5 +1,5 @@
 """ This file is used to setup a bluesky session with standard items"""
-from ari_ophyd import M1
+import ari_ophyd
 from bluesky import RunEngine
 from bluesky.callbacks.best_effort import BestEffortCallback
 from bluesky import plans as plans
@@ -36,8 +36,9 @@ m1_locations_data = {'measure': {'diag.locations': ('Out', None),
                                  'slits.locations': ('nominal', None)},
                      'Yag': {'diag.locations': ('YaG', None),
                              'slits.locations': ('nominal', None)}}
-m1 = M1('ARI_M1:', name='m1', locations_data=m1_locations_data,
-        labels=('device',))
+m1 = ari_ophyd.M1('ARI_M1:', name='m1', locations_data=m1_locations_data,
+                  labels=('device',))
+M1 = m1  # Create a reference object so that m1 or M1 are equivalent.
 
 plans = common_bluesky.PlanCollector(
     plans_to_import=common_bluesky._plans_to_import,
