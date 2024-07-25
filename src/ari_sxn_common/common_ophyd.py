@@ -1,4 +1,5 @@
 from collections import defaultdict
+from nslsii.devices import TwoButtonShutter
 from ophyd import (Component, Device, EpicsMotor)
 from ophyd.areadetector.base import ADComponent
 from ophyd.areadetector.cam import ProsilicaDetectorCam
@@ -255,6 +256,13 @@ class ID29EM(PrettyStrForSignal, NSLS_EM):
                 device.kind = 'config'  # Set signal to 'config' for readback
             elif hasattr(device, 'kind'):
                 device.kind = 'omitted'  # set signal to 'omitted'.
+
+
+class ID29TwoButtonShutter(PrettyStrForSignal, TwoButtonShutter):
+    """
+    An nslsii.devices.TwoButtonShutter class that adds the `__str__` and
+    `__dir__` methods from PrettyStrForSignal
+    """
 
 
 class Prosilica(PrettyStrForSignal, SingleTrigger, ProsilicaDetector):

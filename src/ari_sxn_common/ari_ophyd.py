@@ -1,7 +1,8 @@
 from common_ophyd import (BaffleSlit, Diagnostic, DeviceWithLocations,
-                          ID29EpicsMotor, ID29EpicsSignalRO)
+                          ID29EpicsMotor, ID29EpicsSignalRO,
+                          ID29TwoButtonShutter)
 from ophyd import Component
-from nslsii.devices import TwoButtonShutter
+
 
 
 class M1(DeviceWithLocations):
@@ -84,7 +85,7 @@ class M1(DeviceWithLocations):
                     labels=('detector',))
     ip = Component(ID29EpicsSignalRO, "ip", name='ip', kind='config',
                    labels=('detector',))
-    gv = Component(TwoButtonShutter, "gv:", name='gv', kind='config',
+    gv = Component(ID29TwoButtonShutter, "gv:", name='gv', kind='config',
                    labels=('position',))
 
 
