@@ -2,13 +2,11 @@ from bluesky import plans
 from bluesky import plan_stubs
 from types import SimpleNamespace
 
-# Note that the dict has the structure {[alias1, alias2, ...]:plan_stub, ...}
-_plan_stubs_to_alias = {('move', 'mv'): plan_stubs.mv,
-                        ('relative_move', 'mvr'): plan_stubs.mvr}
-
 # Note that the dict has the structure {[alias1, alias2, ...]:'plan', ...}
 # noinspection PyRedundantParentheses
-_plans_to_alias = {('count',): plans.count,
+_plans_to_alias = {('move', 'mv'): plan_stubs.mv,
+                   ('relative_move', 'mvr'): plan_stubs.mvr,
+                   ('count',): plans.count,
                    ('scan',): plans.scan,
                    ('relative_scan', 'rel_scan'): plans.rel_scan,
                    ('grid_scan',): plans.grid_scan,

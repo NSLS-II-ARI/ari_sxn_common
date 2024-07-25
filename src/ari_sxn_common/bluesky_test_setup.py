@@ -22,10 +22,6 @@ RE.waiting_hook = ProgressBarManager()
 
 EpicsSignalBase.set_defaults(timeout=10, connection_timeout=10)
 
-# create the plan_stub objects
-for aliases, plan_stub in common_bluesky._plan_stubs_to_alias.items():
-    for alias in aliases:
-        globals()[alias] = plan_stub
 # create the plan objects
 for aliases, plan in common_bluesky._plans_to_alias.items():
     for alias in aliases:
@@ -40,7 +36,6 @@ m1 = ari_ophyd.M1('ARI_M1:', name='m1', locations_data=m1_locations_data,
                   labels=('device',))
 M1 = m1  # Create a reference object so that m1 or M1 are equivalent.
 
-common_bluesky._plans_to_alias.update(common_bluesky._plan_stubs_to_alias)
 plans = common_bluesky.PlanCollector(
     plans_for_methods=common_bluesky._plans_to_alias,
     name='plans')
