@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 from nslsii.devices import TwoButtonShutter
 from ophyd import (Component, Device, EpicsMotor)
 from ophyd.areadetector.base import ADComponent
@@ -474,7 +474,7 @@ class DeviceWithLocations(PrettyStrForDevices, Device):
                 Returns the result of super().get(**kwargs)
             """
             # Determine the locations we are currently 'in'.
-            locations = []
+            locations = {}
             # Note the next line gives an 'accessing a protected member,
             # _locations_data' warning in my editor. I accept the risk !-).
             for location, location_data in self.parent._locations_data.items():
@@ -524,9 +524,11 @@ class DeviceWithLocations(PrettyStrForDevices, Device):
                                          f'DeviceWithLocations '
                                          f'LocationSignal signals')
                 if all(value_check):
-                    locations.append(location)
-
-            self.put(locations)  # Set the value at read time.
+                    locations[location] = True
+                else:
+                    locations[location] = False
+            # Set the value at read time.
+            self.put(self.parent._LocationsTuple(**locations))
 
             return super().get(**kwargs)  # run the parent get function.
 
@@ -596,7 +598,10 @@ class DeviceWithLocations(PrettyStrForDevices, Device):
             locations_data = {}
         self._locations_data = locations_data
 
-    locations = Component(LocationSignal, value=[], name='locations',
+        self._LocationsTuple = namedtuple('Locations',
+                                         self._locations_data.keys())
+
+    locations = Component(LocationSignal, name='locations',
                           kind='config', labels=('position',))
 
 
