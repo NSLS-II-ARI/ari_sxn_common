@@ -1,33 +1,37 @@
 from bluesky import plans
 from bluesky import plan_stubs
+from types import SimpleNamespace
 
-# Note that the dict has the structure {'plan_stub':[alias1, alias2, ...], ...}
-_plan_stubs_to_import = {'mv': ['move', 'mv'], 'mvr': ['relative_move', 'mv']}
+# Note that the dict has the structure {[alias1, alias2, ...]:'plan', ...}
+# noinspection PyRedundantParentheses
+_plans_to_alias = {('move', 'mv'): plan_stubs.mv,
+                   ('relative_move', 'mvr'): plan_stubs.mvr,
+                   ('count',): plans.count,
+                   ('scan',): plans.scan,
+                   ('relative_scan', 'rel_scan'): plans.rel_scan,
+                   ('grid_scan',): plans.grid_scan,
+                   ('relative_grid_scan',
+                    'rel_grid_scan'): plans.rel_grid_scan,
+                   ('list_scan',): plans.list_scan,
+                   ('relative_list_scan',
+                    'rel_list_scan'): plans.relative_list_scan,
+                   ('list_grid_scan',): plans.list_grid_scan,
+                   ('relative_list_grid_scan',
+                    'rel_list_grid_scan'): plans.rel_list_grid_scan,
+                   ('log_scan',): plans.log_scan,
+                   ('relative_log_scan',
+                    'rel_log_scan'): plans.relative_log_scan,
+                   ('spiral',): plans.spiral,
+                   ('relative_spiral', 'rel_spiral'): plans.relative_spiral,
+                   ('spiral_fermat',): plans.spiral_fermat,
+                   ('relative_spiral_fermat',
+                    'rel_spiral_fermat'): plans.rel_spiral_fermat,
+                   ('spiral_square',): plans.spiral_square,
+                   ('relative_spiral_square',
+                    'rel_spiral_square'): plans.rel_spiral_square}
 
-# Note that the dict has the structure {'plan':[alias1, alias2, ...], ...}
-_plans_to_import = {'count': ['count'],
-                    'scan': ['scan'],
-                    'rel_scan': ['relative_scan', 'rel_scan'],
-                    'grid_scan': ['grid_scan'],
-                    'rel_grid_scan': ['relative_grid_scan', 'rel_grid_scan'],
-                    'list_scan': ['list_scan'],
-                    'rel_list_scan': ['relative_list_scan', 'rel_list_scan'],
-                    'list_grid_scan': ['list_grid_scan'],
-                    'rel_list_grid_scan': ['relative_list_grid_scan',
-                                           'rel_list_grid_scan'],
-                    'log_scan': ['log_scan'],
-                    'rel_log_scan': ['relative_log_scan', 'rel_log_scan'],
-                    'spiral': ['spiral'],
-                    'rel_spiral': ['relative_spiral', 'rel_spiral'],
-                    'spiral_fermat': ['spiral_fermat'],
-                    'rel_spiral_fermat': ['relative_spiral_fermat',
-                                          'rel_spiral_fermat'],
-                    'spiral_square': ['spiral_square'],
-                    'rel_spiral_square': ['relative_spiral_square',
-                                          'rel_spiral_square']}
 
-
-class PlanCollectorSub:
+class PlanCollectorSub(SimpleNamespace):
     """
     A class used to initialize child attributes with methods for PlanCollector's
 
@@ -36,8 +40,9 @@ class PlanCollectorSub:
 
     Parameters
     ----------
-    methods_to_import : {str: func}
-        A dictionary mapping method names to methods for the sub class.
+    plans for methods : {str: func}
+        A dictionary mapping method tuples of method names to methods for the
+        sub class.
     name : str
         The name of the sub-class, usually matches this instances attribute name
     parent : PlanCollector
@@ -52,8 +57,6 @@ class PlanCollectorSub:
 
     Methods
     _______
-    methods : many
-        All of the methods specified in methods_to_import
     __str__() :
         Returns a user friendly formatted string showing the structure of the
         instance including all of the methods from methods_to_import but not
@@ -62,9 +65,8 @@ class PlanCollectorSub:
         Returns a list of attribute name strings to be used to define what
         options are available when doing tab-to-complete.
     """
-    def __init__(self, methods_to_import, name, parent):
-        for plan_name, function in methods_to_import.items():
-            setattr(self, plan_name, function)
+    def __init__(self, plans_for_methods, name, parent):
+        super().__init__(**plans_for_methods)
 
         self.name = f'{parent.name}_{name}'
         self.parent = parent
@@ -111,10 +113,8 @@ class PlanCollectorSub:
         return attribute_list
 
 
-
-class PlanCollector:
-    """
-    A class used to collect together the plans to be used at ARI and SXN,
+class PlanCollector(SimpleNamespace):
+    """A class used to collect together the plans to be used at ARI and SXN,
 
     This is a 'collector' class that is designed to hold together the plans that
     are used at both ARI and SXN. It will include all of the builtin
@@ -128,39 +128,14 @@ class PlanCollector:
 
     Parameters
     ----------
-    plans_to_import : {str:[str,str,...]}
-        The `bluesky.plans` plans to add as methods, has the structure:
-            {'plan_name': ['alias 1', 'alias 2', ...]}
-        for example:
-            {'rel_scan': ['relative_scan', 'rel_scan']}
-        Note: only the first alias above will be added to avoid to many options,
-        all aliases are in this dict as the same dict is used to populate the
-        global namespace versions of these.
-    plan_stubs_to_import : {str:[str,str,...]}
-        The `bluesky.plan_stubs` plan_stubs to add as methods, has the
-        structure:
-            {'plan_stub_name': ['alias 1', 'alias 2', ...]}
-        for example:
-            {'mv': ['move', 'mv']}
-        Note: only the first alias above will be added to avoid to many options,
-        all aliases are in this dict as the same dict is used to populate the
-        global namespace versions of these.
-     name : str
-        The name of the sub-class, usually matches this instances attribute name
-
-    Attributes
-    ----------
-    built-ins : many
-        All of the built-in plans from `bluesky.plans` (but not aliases) as
-        given in plans_to_import and plan_stubs_to_import.
-     name : str
-        The name of the sub-class, usually matches this instances attribute name
+    plans for methods : {str: func}
+        A dictionary mapping method tuples of method names to methods for the
+        sub class.
+    name : str
+        The name of the object, usually matches this instances attribute name
 
     Methods
     _______
-    methods : many
-        All of the built-in plans from `bluesky.plans` (but not aliases) as
-        given in plans_to_import and plan_stubs_to_import.
     __str__() :
         Returns a user friendly formatted string showing the structure of the
         instance including all of the methods from plans_to_import,
@@ -169,55 +144,21 @@ class PlanCollector:
     __dir__() :
         Returns a list of attribute name strings to be used to define what
         options are available when doing tab-to-complete.
+
     """
-    def __init__(self, plans_to_import, plan_stubs_to_import, name):
-        """
-        Initializes the methods from plans_to_import and sub_plans_to_import
+    def __init__(self, plans_for_methods={}, name=None):
 
-        Parameters
-        ----------
-        plans_to_import : {str:[str,str,...]}
-            The `bluesky.plans` plans to add as methods, has the structure:
-                {'plan_name': ['alias 1', 'alias 2', ...]}
-            for example:
-                {'rel_scan': ['relative_scan', 'rel_scan']}
-            Note: only the first alias above will be added to avoid to many
-            options, all aliases are in this dict as the same dict is used to
-            populate the global namespace versions of these.
-        plan_stubs_to_import : {str:[str,str,...]}
-            The `bluesky.plan_stubs` plan_stubs to add as methods, has the
-            structure:
-                {'plan_stub_name': ['alias 1', 'alias 2', ...]}
-            for example:
-                {'mv': ['move', 'mv']}
-            Note: only the first alias above will be added to avoid to many
-            options, all aliases are in this dict as the same dict is used to
-            populate the global namespace versions of these.
-        """
-        self.name = name
+        if name:
+            self.name = name
+        else:
+            self.name = 'PlanCollector'
 
-        relative_plans_to_import = {}  # used to separate out relative plans
-
-        # create the plan_stub methods
-        for plan_stub, aliases in plan_stubs_to_import.items():
-            if plan_stub.startswith('rel_') or plan_stub == 'mvr':
-                plan_stub_name = aliases[0].split('_', 1)[1]
-                relative_plans_to_import[plan_stub_name] = getattr(plan_stubs,
-                                                                   plan_stub)
-            else:
-                setattr(self, aliases[0], getattr(plan_stubs, plan_stub))
-
-        # create the plan methods
-        for plan, aliases in plans_to_import.items():
-            if plan.startswith('rel_'):
-                plan_name = aliases[0].split('_', 1)[1]
-                relative_plans_to_import[plan_name] = getattr(plans, plan)
-            else:
-                setattr(self, aliases[0], getattr(plans, plan))
-
-        # add the relative scan subclass
-        self.relative = PlanCollectorSub(relative_plans_to_import,
-                                         name='relative', parent=self)
+        super().__init__(**{k[0]: v for k, v in plans_for_methods.items()
+                            if not k[0].startswith('rel')})
+        self.relative = PlanCollectorSub(plans_for_methods={
+            k[0]: v for k, v in plans_for_methods.items()
+            if k[0].startswith('rel')},
+            name='relative', parent=self)
 
     def __str__(self):
         """
@@ -234,7 +175,7 @@ class PlanCollector:
         output = f'\n{self.name}:'
         for name, plan in self.__dict__.items():
             if name not in ['name', 'parent']:
-                if plan.__dict__:  #if plan has attributes
+                if plan.__dict__:  # if plan has attributes
                     output += f'\n    {plan.__str__().replace(
                         '\n', '\n    ').replace(
                         f'{self.name}_', '')}'
@@ -253,7 +194,7 @@ class PlanCollector:
 
         This method is used to give the list of options when using pythons tab
         to complete process. It gives all of the method attributes and any
-        PlanCollectorSun attributes but not the 'name' attribute.
+        PlanCollectorSub attributes but not the 'name' attribute.
 
         Returns
         -------
