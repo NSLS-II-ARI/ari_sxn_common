@@ -11,81 +11,64 @@ import re
 
 
 # noinspection PyUnresolvedReferences,PyProtectedMember
-class PrettyStrForDevices:
+
+def _pretty__str__for_branches(self):
     """
-    A class that provides a better print and tab-to-complete functionality`
+    Updates the __str__() method to provide a custom `__str__()` method that
+    returns a formatted string that includes the device name as well as
+    child components grouped by the `component._ophyd_labels_` list.
 
-    This class has a custom `__str__()` method that returns a formatted string
-    that includes the device name as well as child signals grouped by the
-    `signal._ophyd_labels_` list.
-
-    This class also has a custom `__dir__()` method that returns a list of
-    attribute names giving the required options when using tab-to-complete. This
-    list contains all of the signals found in `self._signals.keys()` as well as
-    the `read()` method.
-
-    Methods
+    Returns
     -------
-    __str__() :
-        Returns a formatted string indicating it's name and all of the child
-        signals grouped by their `_ophyd_labels_`.
-    __dir__() :
-        Returns a list of attribute name strings to be used to define what
-        options are available when doing tab-to-complete.
+    output : str
+        A formatted string that should be printed when using print(self)
     """
-    def __str__(self):
-        """
-        Updates the __str__() method to provide the formatted string described
-        in the class definition.
+    components = defaultdict(list)
+    if hasattr(self, '_signals'):
+        for component in self.component_names:
+            try:
+                labels = list(getattr(self, component)._ophyd_labels_)
+            except IndexError:
+                labels = {'unknown', }
+            for label in labels:
+                components[label].append(
+                    getattr(self, component).__str__().replace(
+                        f'{self.name}_', ''))
 
-        Returns
-        -------
-        output : str
-            A formatted string that should be printed when using print(self)
-        """
-        signals = defaultdict(list)
-        if hasattr(self, '_signals'):
-            for signal in self.component_names:
-                try:
-                    labels = list(getattr(self, signal)._ophyd_labels_)
-                except IndexError:
-                    labels = {'unknown', }
-                for label in labels:
-                    signals[label].append(
-                        getattr(self, signal).__str__().replace(
-                            f'{self.name}_', ''))
+    try:
+        self_label = self._ophyd_labels_
+    except IndexError:
+        self_label = {'unknown', }
 
-        try:
-            self_label = self._ophyd_labels_
-        except IndexError:
-            self_label = {'unknown', }
+    output = f'\n{self.name} ({str(self_label)[1:-1]})'
+    for label, names in components.items():
+        output += f'\n  "{label}s":'
+        for name in names:
+            output += f'    {re.sub(r'\(.*\)', '', 
+                                    name.replace('\n', '\n    '))}'
 
-        output = f'\n{self.name} ({str(self_label)[1:-1]})'
-        for label, names in signals.items():
-            output += f'\n  "{label}s":'
-            for name in names:
-                output += f'    {re.sub(r'\(.*\)', '', 
-                                        name.replace('\n', '\n    '))}'
+    return output
 
-        return output
 
-    def __dir__(self):
-        """
-        Used to limit the number of options when using tab to complete.
+def _pretty__dir__for_devices(self):
+    """
+    Used to limit the number of options when using tab to complete.
 
-        This method is used to give the list of options when using pythons tab
-        to complete process. It gives all of the signal attributes (motors and
-        detectors) as well as the 'read' method.
+    This method is used to give the list of options when using pythons tab
+    to complete process. It is a custom `__dir__()` method that returns a
+    list of component names giving the useful options when using
+    tab-to-complete. This list contains all of the components found in
+    `self.component_names` as well as the `read()` method.
 
-        Returns
-        -------
-        attribute_list : list[str]
-            A list of attribute names to be included when using tab-to-complete
-        """
-        attribute_list = ['read']
-        attribute_list.extend([key for key in self.component_names])
+    Returns
+    -------
+    attribute_list : list[str]
+        A list of attribute names to be included when using tab-to-complete
+    """
+    attribute_list = ['read']
+    attribute_list.extend([key for key in self.component_names])
 
-        return attribute_list
+    return attribute_list
 
 
 # noinspection PyUnresolvedReferences
@@ -346,7 +329,7 @@ class Prosilica(PrettyStrForSignal, SingleTrigger, ProsilicaDetector):
     cam = Component(ProsilicaCam, "cam1:", kind='normal')
 
 
-class DeviceWithLocations(PrettyStrForDevices, Device):
+class DeviceWithLocations(Device):
     """
     A child of ophyd.Device that adds a 'location' functionality.
 
@@ -600,6 +583,9 @@ class DeviceWithLocations(PrettyStrForDevices, Device):
 
         self._LocationsTuple = namedtuple('Locations',
                                          self._locations_data.keys())
+
+    __str__ = _pretty__str__for_branches
+    __dir__ = _pretty__dir__for_devices
 
     locations = Component(LocationSignal, name='locations',
                           kind='config', labels=('position',))
