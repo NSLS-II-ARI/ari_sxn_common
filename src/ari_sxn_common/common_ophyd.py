@@ -13,7 +13,8 @@ import re
 # noinspection PyUnresolvedReferences,PyProtectedMember
 
 def _pretty__str__for_branches(self):
-    """
+    """Custom __str__method for use with 'branch' like devices
+
     Updates the __str__() method to provide a custom `__str__()` method that
     returns a formatted string that includes the device name as well as
     child components grouped by the `component._ophyd_labels_` list.
@@ -52,7 +53,7 @@ def _pretty__str__for_branches(self):
 
 def _pretty__dir__for_devices(self):
     """
-    Used to limit the number of options when using tab to complete.
+    Limits the number of options when using tab to complete on branch devices.
 
     This method is used to give the list of options when using pythons tab
     to complete process. It is a custom `__dir__()` method that returns a
@@ -71,65 +72,47 @@ def _pretty__dir__for_devices(self):
     return attribute_list
 
 
-# noinspection PyUnresolvedReferences
-class PrettyStrForSignal:
-    """
-    A class that provides a better string when using `print(PrettyStr)`
+def _pretty__str__for_leaves(self):
+    """Custom __str__method for use with 'leaf' like devices.
 
     This class has a custom `__str__()` method that returns a formatted string
     that includes the device name as well as the `signal._ophyd_labels_` list.
     It is designed for use with the `PrettyStrForDevices` class but on the
     lowest level signals that should be accessed by users.
 
+    Returns
+    -------
+    output : str
+        A formatted string that should be printed when using print(self)
+    """
+
+    try:
+        self_label = self._ophyd_labels_
+    except IndexError:
+        self_label = {'unknown', }
+    return f'{self.name} ({str(self_label)[1:-1]})'
+
+def _pretty__dir__for_leaves(self):
+    """
+    Limits the number of options when using tab to complete with 'leaf' devices.
+
     This class also has a custom `__dir__()` method that returns a list of
     attribute names giving the required options when using tab-to-complete. This
     list contains only the `read()` method.
 
-    Methods
+
+    Returns
     -------
-    __str__() :
-        Returns a formatted string indicating it's name and it's
-        `_ophyd_labels_`.
-    __dir__() :
-        Returns a list of attribute name strings to be used to define what
-        options are available when doing tab-to-complete.
+    attribute_list : list[str]
+        A list of attribute names to be included when using tab-to-complete
     """
+    attribute_list = ['read']
 
-    def __str__(self):
-        """
-        Updating the __str__ function to return 'name (label)'
-
-        Returns
-        -------
-        output : str
-            A formatted string that should be printed when using print(self)
-        """
-
-        try:
-            self_label = self._ophyd_labels_
-        except IndexError:
-            self_label = {'unknown', }
-        return f'{self.name} ({str(self_label)[1:-1]})'
-
-    def __dir__(self):
-        """
-        Used to limit the number of options when using tab to complete.
-
-        This method is used to give the list of options when using pythons tab
-        to complete process. It gives only the 'read' method.
-
-        Returns
-        -------
-        attribute_list : list[str]
-            A list of attribute names to be included when using tab-to-complete
-        """
-        attribute_list = ['read']
-
-        return attribute_list
+    return attribute_list
 
 
 # noinspection PyUnresolvedReferences
-class ID29EpicsMotor(PrettyStrForSignal, EpicsMotor):
+class ID29EpicsMotor(EpicsMotor):
     """
     Updates ophyd.EpicsMotor with a str method from PrettyStrForSignal
 
@@ -162,9 +145,11 @@ class ID29EpicsMotor(PrettyStrForSignal, EpicsMotor):
         self.user_setpoint.kind = 'normal'
         self.user_readback.kind = 'hinted'
 
+    __str__ = _pretty__str__for_leaves
+    __dir__ = _pretty__dir__for_leaves
 
 # noinspection PyUnresolvedReferences
-class ID29EpicsSignalRO(PrettyStrForSignal, EpicsSignalRO):
+class ID29EpicsSignalRO(EpicsSignalRO):
     """
     Updates ophyd.EpicsSignalRO with a str method from PrettyStrForSignal
 
@@ -186,9 +171,10 @@ class ID29EpicsSignalRO(PrettyStrForSignal, EpicsSignalRO):
         The methods of the parent `PrettyStrForSignal` and `EpicsSignalRO`
         classes.
     """
+    __str__ = _pretty__str__for_leaves
+    __dir__ = _pretty__dir__for_leaves
 
-
-class ID29EM(PrettyStrForSignal, NSLS_EM):
+class ID29EM(NSLS_EM):
     """
     A 29-ID specific version of the NSLS_EM quadEM device.
 
@@ -240,15 +226,19 @@ class ID29EM(PrettyStrForSignal, NSLS_EM):
             elif hasattr(device, 'kind'):
                 device.kind = 'omitted'  # set signal to 'omitted'.
 
+    __str__ = _pretty__str__for_leaves
+    __dir__ = _pretty__dir__for_leaves
 
-class ID29TwoButtonShutter(PrettyStrForSignal, TwoButtonShutter):
+
+class ID29TwoButtonShutter(TwoButtonShutter):
     """
     An nslsii.devices.TwoButtonShutter class that adds the `__str__` and
     `__dir__` methods from PrettyStrForSignal
     """
+    __str__ = _pretty__str__for_leaves
+    __dir__ = _pretty__dir__for_leaves
 
-
-class Prosilica(PrettyStrForSignal, SingleTrigger, ProsilicaDetector):
+class Prosilica(SingleTrigger, ProsilicaDetector):
     """
     Adds the `cam1.array_data` attribute required when not image saving.
 
@@ -287,6 +277,9 @@ class Prosilica(PrettyStrForSignal, SingleTrigger, ProsilicaDetector):
         super().__init__(*args, **kwargs)
         self.cam.kind = 'normal'
         self.cam.array_data.kind = 'normal'
+
+    __str__ = _pretty__str__for_leaves
+    __dir__ = _pretty__dir__for_leaves
 
     class ProsilicaCam(ProsilicaDetectorCam):
         """
@@ -384,7 +377,7 @@ class DeviceWithLocations(Device):
     """
 
     # noinspection PyUnresolvedReferences
-    class LocationSignal(PrettyStrForSignal, Signal):
+    class LocationSignal(Signal):
         """
         An InternalSignal class to be used for updating the 'location' signal
 
@@ -429,6 +422,9 @@ class DeviceWithLocations(Device):
             returns a list of possible 'locations' that the parent device can
             be set to.
         """
+
+        __str__ = _pretty__str__for_leaves
+        __dir__ = _pretty__dir__for_leaves
 
         def get(self, **kwargs):
             """
