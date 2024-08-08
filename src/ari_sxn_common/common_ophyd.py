@@ -45,7 +45,7 @@ class PrettyStrForDevices:
         """
         signals = defaultdict(list)
         if hasattr(self, '_signals'):
-            for signal in self._signals.keys():
+            for signal in self.component_names:
                 try:
                     labels = list(getattr(self, signal)._ophyd_labels_)
                 except IndexError:
@@ -83,7 +83,7 @@ class PrettyStrForDevices:
             A list of attribute names to be included when using tab-to-complete
         """
         attribute_list = ['read']
-        attribute_list.extend([key for key in self._signals.keys()])
+        attribute_list.extend([key for key in self.component_names])
 
         return attribute_list
 
