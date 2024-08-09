@@ -51,7 +51,7 @@ def _pretty__str__for_branches(self):
     return output
 
 
-def _pretty__dir__for_devices(self):
+def _pretty__dir__for_branches(self):
     """
     Limits the number of options when using tab to complete on branch devices.
 
