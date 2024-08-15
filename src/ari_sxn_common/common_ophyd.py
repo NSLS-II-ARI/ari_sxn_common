@@ -92,6 +92,7 @@ def _pretty__str__for_leaves(self):
         self_label = {'unknown', }
     return f'{self.name} ({str(self_label)[1:-1]})'
 
+
 def _pretty__dir__for_leaves(self):
     """
     Limits the number of options when using tab to complete with 'leaf' devices.
@@ -148,6 +149,7 @@ class ID29EpicsMotor(EpicsMotor):
     __str__ = _pretty__str__for_leaves
     __dir__ = _pretty__dir__for_leaves
 
+
 # noinspection PyUnresolvedReferences
 class ID29EpicsSignalRO(EpicsSignalRO):
     """
@@ -173,6 +175,7 @@ class ID29EpicsSignalRO(EpicsSignalRO):
     """
     __str__ = _pretty__str__for_leaves
     __dir__ = _pretty__dir__for_leaves
+
 
 class ID29EM(NSLS_EM):
     """
@@ -237,6 +240,7 @@ class ID29TwoButtonShutter(TwoButtonShutter):
     """
     __str__ = _pretty__str__for_leaves
     __dir__ = _pretty__dir__for_leaves
+
 
 class Prosilica(SingleTrigger, ProsilicaDetector):
     """
@@ -578,10 +582,10 @@ class DeviceWithLocations(Device):
         self._locations_data = locations_data
 
         self._LocationsTuple = namedtuple('Locations',
-                                         self._locations_data.keys())
+                                          self._locations_data.keys())
 
     __str__ = _pretty__str__for_branches
-    __dir__ = _pretty__dir__for_devices
+    __dir__ = _pretty__dir__for_branches
 
     locations = Component(LocationSignal, name='locations',
                           kind='config', labels=('position',))

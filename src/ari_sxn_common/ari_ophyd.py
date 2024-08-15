@@ -1,8 +1,38 @@
 from common_ophyd import (BaffleSlit, Diagnostic, DeviceWithLocations,
                           ID29EpicsMotor, ID29EpicsSignalRO,
-                          ID29TwoButtonShutter)
-from ophyd import Component
+                          ID29TwoButtonShutter,
+                          _pretty__str__for_branches,
+                          _pretty__dir__for_branches)
+from ophyd import Component, Device
 
+
+class _AriSxnC(Device):
+    """
+    An internal class that adds the vacuum devices for the AriSxnC section
+    """
+    __str__ = _pretty__str__for_branches
+    __dir__ = _pretty__dir__for_branches
+
+    ccg = Component(ID29EpicsSignalRO, "ccg", name='ccg',
+                    kind='config', labels=('detector',))
+    tcg = Component(ID29EpicsSignalRO, "tcg", name='tcg',
+                    kind='config', labels=('detector',))
+    ip = Component(ID29EpicsSignalRO, "ip", name='ip', kind='config',
+                   labels=('detector',))
+    gv = Component(ID29TwoButtonShutter, "gv:", name='gv',
+                   kind='config', labels=('position',))
+
+
+class _VacuumDevices(Device):
+    """
+    An internal class that adds the vacuum devices in a child sub-device
+    """
+
+    __str__ = _pretty__str__for_branches
+    __dir__ = _pretty__dir__for_branches
+
+    AriSxnC = Component(_AriSxnC, name='AriSxnC', prefix='ARI_M1:',
+                        labels=('section',))
 
 
 class M1(DeviceWithLocations):
@@ -36,12 +66,8 @@ class M1(DeviceWithLocations):
         The motor for mirror motion along the x axis.
     y : ID29EpicsMotor
         The motor for mirror motion along the y axis.
-    ccg : ID29EpicsSignalRO
-        The cold cathode gauge reading in the mirror chamber
-    tcg : ID29EpicsSignalRO
-        The thermo-couple (Pirani) gauge reading in the mirror chamber
-    ip : ID29EpicsSignalRO
-        The ion pump reading in the mirror chamber
+    vacuum: _VacuumDevices
+        A device that contains all of the vacuum devices/ hardware.
     slits : BaffleSlit
         The baffle slit downstream of the mirror chamber
     diag : Diagnostic
@@ -56,6 +82,7 @@ class M1(DeviceWithLocations):
         the child `BaffleSlit` class, and the child `Diagnostic` class and
         returns a combination of all of the status objects.
     """
+
     def __init__(self, *args, **kwargs):
         """
         A new __init__ method that links photocurrent to the self.diag quadem
@@ -78,24 +105,16 @@ class M1(DeviceWithLocations):
     y = Component(ID29EpicsMotor, 'y', name='y', kind='normal',
                   labels=('motor',))
 
-    # Mirror chamber vacuum axes
-    ccg = Component(ID29EpicsSignalRO, "ccg", name='ccg', kind='config',
-                    labels=('detector',))
-    tcg = Component(ID29EpicsSignalRO, "tcg", name='tcg', kind='config',
-                    labels=('detector',))
-    ip = Component(ID29EpicsSignalRO, "ip", name='ip', kind='config',
-                   labels=('detector',))
-    gv = Component(ID29TwoButtonShutter, "gv:", name='gv', kind='config',
-                   labels=('position',))
-
+    vacuum = Component(_VacuumDevices, name='vacuum', prefix='',
+                       labels=('device',))
 
     # baffle slit sub-device
     slits = Component(BaffleSlit, "baffle:", name='slits', kind='normal',
                       labels=('device',),
                       locations_data={'all_in': {'top': (-12.7, 0.1),
-                                             'bottom': (12.7, 0.1),
-                                             'inboard': (12.7, 0.1),
-                                             'outboard': (-12.7, 0.1)},
+                                                 'bottom': (12.7, 0.1),
+                                                 'inboard': (12.7, 0.1),
+                                                 'outboard': (-12.7, 0.1)},
                                       'centre': {'top': (0, 0.1),
                                                  'bottom': (0, 0.1),
                                                  'inboard': (0, 0.1),
@@ -105,9 +124,9 @@ class M1(DeviceWithLocations):
                                                   'inboard': (-12.7, 0.1),
                                                   'outboard': (12.7, 0.1)},
                                       'all_out': {'top': (28, 0.1),
-                                              'bottom': (-28, 0.1),
-                                              'inboard': (-28, 0.1),
-                                              'outboard': (28, 0.1)}})
+                                                  'bottom': (-28, 0.1),
+                                                  'inboard': (-28, 0.1),
+                                                  'outboard': (28, 0.1)}})
 
     # diagnostic sub-device
     diag = Component(Diagnostic, "diag:", name='diag', kind='normal',
